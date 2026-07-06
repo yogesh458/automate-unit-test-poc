@@ -5,21 +5,26 @@ on:
     branches:
       - main
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   diffblue-cover:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout your Spring Boot code
+      # 1. Checkout project
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      # Step 2: Diffblue automatically analyzes code
-      # and generates/updates Java unit tests
+      # 2. Setup Java
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      # 3. AI analyzes code and generates tests
       - name: Diffblue Cover - Generate Unit Tests
         uses: diffblue/cover-github-action/jdk17@main
         env:
@@ -28,34 +33,62 @@ jobs:
           access-token: ${{ secrets.DIFFBLUE_ACCESS_TOKEN }}
           license-key: ${{ secrets.DIFFBLUE_LICENSE_KEY }}
 
-      # Step 3: Run all unit tests
+      # 4. Run all unit tests
+      # JaCoCo also collects coverage
       - name: Run Unit Tests
-        run: mvn test
+        run: mvn clean test
 
-      # Step 4: ALLOW when everything passes
+      # 5. Generate Unit Test HTML report
+      - name: Generate Unit Test HTML Report
+        if: always()
+        run: mvn surefire-report:report-only
+
+      # 6. Generate JaCoCo HTML report
+      - name: Generate JaCoCo Coverage Report
+        if: always()
+        run: mvn jacoco:report
+
+      # 7. Upload Unit Test HTML report
+      - name: Upload Unit Test HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-html-report
+          path: target/site/surefire-report.html
+          retention-days: 14
+
+      # 8. Upload raw test results
+      - name: Upload Raw Unit Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-raw-results
+          path: target/surefire-reports/
+          retention-days: 14
+
+      # 9. Upload JaCoCo HTML report
+      - name: Upload JaCoCo Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-html-report
+          path: target/site/jacoco/
+          retention-days: 14
+
+      # 10. ALLOW
       - name: Deployment Decision - ALLOW
         if: success()
         run: |
           echo "================================"
           echo "DEPLOYMENT DECISION: ALLOW"
-          echo "Diffblue completed successfully"
-          echo "All unit tests passed"
+          echo "AI-generated unit tests passed"
           echo "================================"
 
-      # Step 5: BLOCK when anything fails
+      # 11. BLOCK
       - name: Deployment Decision - BLOCK
         if: failure()
         run: |
           echo "================================"
           echo "DEPLOYMENT DECISION: BLOCK"
-          echo "AI generation or unit tests failed"
+          echo "One or more required steps failed"
           echo "================================"
-
-      # Step 6: Save Diffblue logs
-      - name: Upload Diffblue Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: diffblue-logs
-          path: |
-            **/.diffblue/**
