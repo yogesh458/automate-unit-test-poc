@@ -36,7 +36,7 @@ jobs:
       # 4. Run all unit tests
       # JaCoCo also collects coverage
       - name: Run Unit Tests
-        run: mvn clean test
+        run: mvn test
 
       # 5. Generate Unit Test HTML report
       - name: Generate Unit Test HTML Report
