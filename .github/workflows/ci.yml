@@ -1,0 +1,99 @@
+name: Diffblue AI Unit Test POC
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  diffblue-cover:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout project
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. Setup Java
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      # 3. AI analyzes code and generates tests
+      - name: Diffblue Cover - Generate Unit Tests
+        uses: diffblue/cover-github-action/jdk17@main
+        env:
+          JVM_ARGS: -Xmx4096m
+        with:
+          access-token: ${{ secrets.DIFFBLUE_ACCESS_TOKEN }}
+          license-key: ${{ secrets.DIFFBLUE_LICENSE_KEY }}
+          target: "com.volane.employeecrud.service.EmployeeService"
+
+      # 4. Clean target/ — Diffblue's container leaves it root-owned
+      #    with restrictive permissions; delete and let Maven rebuild fresh
+      - name: Clean workspace before build
+        run: sudo rm -rf target
+
+      # 5. Run all unit tests
+      - name: Run Unit Tests
+        run: mvn test
+
+      # 6. Generate Unit Test HTML report
+      - name: Generate Unit Test HTML Report
+        if: always()
+        run: mvn surefire-report:report
+
+      # 7. Generate JaCoCo HTML report
+      - name: Generate JaCoCo Coverage Report
+        if: always()
+        run: mvn jacoco:report
+
+      # 8. Upload Unit Test HTML report
+      - name: Upload Unit Test HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-html-report
+          path: target/site/
+          retention-days: 14
+
+      # 9. Upload raw test results
+      - name: Upload Raw Unit Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-raw-results
+          path: target/surefire-reports/
+          retention-days: 14
+
+      # 10. Upload JaCoCo HTML report
+      - name: Upload JaCoCo Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-html-report
+          path: target/site/jacoco/
+          retention-days: 14
+
+      # 11. ALLOW
+      - name: Deployment Decision - ALLOW
+        if: success()
+        run: |
+          echo "================================"
+          echo "DEPLOYMENT DECISION: ALLOW"
+          echo "AI-generated unit tests passed"
+          echo "================================"
+
+      # 12. BLOCK
+      - name: Deployment Decision - BLOCK
+        if: failure()
+        run: |
+          echo "================================"
+          echo "DEPLOYMENT DECISION: BLOCK"
+          echo "One or more required steps failed"
+          echo "================================"
