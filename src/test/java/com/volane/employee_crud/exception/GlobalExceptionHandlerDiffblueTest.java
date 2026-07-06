@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.volane.employee_crud.dto.ApiResponse;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +43,11 @@ class GlobalExceptionHandlerDiffblueTest {
   @Test
   @DisplayName(
       "Test handleResourceNotFoundException(ResourceNotFoundException); then StatusCode return HttpStatus")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "ResponseEntity GlobalExceptionHandler.handleResourceNotFoundException(ResourceNotFoundException)"
+  })
   void testHandleResourceNotFoundException_thenStatusCodeReturnHttpStatus() {
     // Arrange and Act
     ResponseEntity<ApiResponse<Void>> actualHandleResourceNotFoundExceptionResult =
@@ -75,7 +81,11 @@ class GlobalExceptionHandlerDiffblueTest {
   @Test
   @DisplayName(
       "Test handleDuplicateResourceException(DuplicateResourceException); then StatusCode return HttpStatus")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "ResponseEntity GlobalExceptionHandler.handleDuplicateResourceException(DuplicateResourceException)"
+  })
   void testHandleDuplicateResourceException_thenStatusCodeReturnHttpStatus() {
     // Arrange and Act
     ResponseEntity<ApiResponse<Void>> actualHandleDuplicateResourceExceptionResult =
@@ -108,7 +118,11 @@ class GlobalExceptionHandlerDiffblueTest {
   @Test
   @DisplayName(
       "Test handleValidationException(MethodArgumentNotValidException); then StatusCode return HttpStatus")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "ResponseEntity GlobalExceptionHandler.handleValidationException(MethodArgumentNotValidException)"
+  })
   void testHandleValidationException_thenStatusCodeReturnHttpStatus() {
     // Arrange
     MethodArgumentNotValidException exception =
@@ -144,7 +158,11 @@ class GlobalExceptionHandlerDiffblueTest {
   @Test
   @DisplayName(
       "Test handleValidationException(MethodArgumentNotValidException); then throw ResourceNotFoundException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "ResponseEntity GlobalExceptionHandler.handleValidationException(MethodArgumentNotValidException)"
+  })
   void testHandleValidationException_thenThrowResourceNotFoundException() {
     // Arrange
     BeanPropertyBindingResult bindingResult = mock(BeanPropertyBindingResult.class);
@@ -167,7 +185,9 @@ class GlobalExceptionHandlerDiffblueTest {
    */
   @Test
   @DisplayName("Test handleGenericException(Exception)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"ResponseEntity GlobalExceptionHandler.handleGenericException(Exception)"})
   void testHandleGenericException() {
     // Arrange and Act
     ResponseEntity<ApiResponse<Void>> actualHandleGenericExceptionResult =

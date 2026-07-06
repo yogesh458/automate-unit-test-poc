@@ -1,6 +1,8 @@
 package com.volane.employee_crud.dto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -13,7 +15,9 @@ class ApiResponseDiffblueTest {
    */
   @Test
   @DisplayName("Test success(int, String, Object)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"ApiResponse ApiResponse.success(int, String, Object)"})
   void testSuccess() {
     // Arrange and Act
     ApiResponse<Object> actualSuccessResult =
@@ -32,7 +36,9 @@ class ApiResponseDiffblueTest {
    */
   @Test
   @DisplayName("Test error(int, String, Object)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"ApiResponse ApiResponse.error(int, String, Object)"})
   void testError() {
     // Arrange and Act
     ApiResponse<Object> actualErrorResult =

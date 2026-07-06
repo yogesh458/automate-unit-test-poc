@@ -8,6 +8,8 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.volane.employee_crud.dto.EmployeeRequestDto;
 import com.volane.employee_crud.dto.EmployeeResponseDto;
 import com.volane.employee_crud.entity.Employee;
@@ -43,7 +45,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test createEmployee(EmployeeRequestDto)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"EmployeeResponseDto EmployeeServiceImpl.createEmployee(EmployeeRequestDto)"})
   void testCreateEmployee() {
     // Arrange
     when(employeeRepository.existsByEmployeeId(Mockito.<String>any()))
@@ -69,7 +73,9 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test createEmployee(EmployeeRequestDto); given EmployeeRepository existsByEmployeeId(String) return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"EmployeeResponseDto EmployeeServiceImpl.createEmployee(EmployeeRequestDto)"})
   void testCreateEmployee_givenEmployeeRepositoryExistsByEmployeeIdReturnTrue() {
     // Arrange
     when(employeeRepository.existsByEmployeeId(Mockito.<String>any())).thenReturn(true);
@@ -92,7 +98,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test createEmployee(EmployeeRequestDto); then calls existsByEmail(String)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"EmployeeResponseDto EmployeeServiceImpl.createEmployee(EmployeeRequestDto)"})
   void testCreateEmployee_thenCallsExistsByEmail() {
     // Arrange
     when(employeeRepository.existsByEmail(Mockito.<String>any())).thenReturn(true);
@@ -117,7 +125,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test createEmployee(EmployeeRequestDto); then return EmployeeId is '42'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"EmployeeResponseDto EmployeeServiceImpl.createEmployee(EmployeeRequestDto)"})
   void testCreateEmployee_thenReturnEmployeeIdIs42() {
     // Arrange
     Employee employee = new Employee();
@@ -162,7 +172,9 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test getEmployeeById(Long); given Employee() Department is 'Department'; then return EmployeeId is '42'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"EmployeeResponseDto EmployeeServiceImpl.getEmployeeById(Long)"})
   void testGetEmployeeById_givenEmployeeDepartmentIsDepartment_thenReturnEmployeeIdIs42() {
     // Arrange
     Employee employee = new Employee();
@@ -201,7 +213,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test getEmployeeById(Long); then throw DuplicateResourceException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"EmployeeResponseDto EmployeeServiceImpl.getEmployeeById(Long)"})
   void testGetEmployeeById_thenThrowDuplicateResourceException() {
     // Arrange
     when(employeeRepository.findById(Mockito.<Long>any()))
@@ -223,7 +237,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test getEmployeeById(Long); then throw ResourceNotFoundException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"EmployeeResponseDto EmployeeServiceImpl.getEmployeeById(Long)"})
   void testGetEmployeeById_thenThrowResourceNotFoundException() {
     // Arrange
     Optional<Employee> emptyResult = Optional.empty();
@@ -247,7 +263,9 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test getAllEmployees(); given Employee() Department is '42'; then return size is two")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeServiceImpl.getAllEmployees()"})
   void testGetAllEmployees_givenEmployeeDepartmentIs42_thenReturnSizeIsTwo() {
     // Arrange
     Employee employee = new Employee();
@@ -310,7 +328,9 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test getAllEmployees(); given Employee() Department is 'Department'; then return size is one")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeServiceImpl.getAllEmployees()"})
   void testGetAllEmployees_givenEmployeeDepartmentIsDepartment_thenReturnSizeIsOne() {
     // Arrange
     Employee employee = new Employee();
@@ -353,7 +373,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test getAllEmployees(); then return Empty")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeServiceImpl.getAllEmployees()"})
   void testGetAllEmployees_thenReturnEmpty() {
     // Arrange
     when(employeeRepository.findAll()).thenReturn(new ArrayList<>());
@@ -377,7 +399,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test getAllEmployees(); then throw DuplicateResourceException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeServiceImpl.getAllEmployees()"})
   void testGetAllEmployees_thenThrowDuplicateResourceException() {
     // Arrange
     when(employeeRepository.findAll())
@@ -395,7 +419,11 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test updateEmployee(Long, EmployeeRequestDto)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "EmployeeResponseDto EmployeeServiceImpl.updateEmployee(Long, EmployeeRequestDto)"
+  })
   void testUpdateEmployee() {
     // Arrange
     when(employeeRepository.findById(Mockito.<Long>any()))
@@ -415,7 +443,11 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test updateEmployee(Long, EmployeeRequestDto)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "EmployeeResponseDto EmployeeServiceImpl.updateEmployee(Long, EmployeeRequestDto)"
+  })
   void testUpdateEmployee2() {
     // Arrange
     Employee employee = new Employee();
@@ -452,7 +484,11 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test updateEmployee(Long, EmployeeRequestDto); given EmployeeRepository existsByEmailAndIdNot(String, Long) return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "EmployeeResponseDto EmployeeServiceImpl.updateEmployee(Long, EmployeeRequestDto)"
+  })
   void testUpdateEmployee_givenEmployeeRepositoryExistsByEmailAndIdNotReturnTrue() {
     // Arrange
     Employee employee = new Employee();
@@ -492,7 +528,11 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test updateEmployee(Long, EmployeeRequestDto); given EmployeeRepository existsByEmployeeIdAndIdNot(String, Long) return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "EmployeeResponseDto EmployeeServiceImpl.updateEmployee(Long, EmployeeRequestDto)"
+  })
   void testUpdateEmployee_givenEmployeeRepositoryExistsByEmployeeIdAndIdNotReturnTrue() {
     // Arrange
     Employee employee = new Employee();
@@ -527,7 +567,11 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test updateEmployee(Long, EmployeeRequestDto); then return EmployeeId is '42'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "EmployeeResponseDto EmployeeServiceImpl.updateEmployee(Long, EmployeeRequestDto)"
+  })
   void testUpdateEmployee_thenReturnEmployeeIdIs42() {
     // Arrange
     Employee employee = new Employee();
@@ -585,7 +629,11 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test updateEmployee(Long, EmployeeRequestDto); then throw ResourceNotFoundException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "EmployeeResponseDto EmployeeServiceImpl.updateEmployee(Long, EmployeeRequestDto)"
+  })
   void testUpdateEmployee_thenThrowResourceNotFoundException() {
     // Arrange
     Optional<Employee> emptyResult = Optional.empty();
@@ -605,7 +653,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test deleteEmployee(Long)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeServiceImpl.deleteEmployee(Long)"})
   void testDeleteEmployee() {
     // Arrange
     when(employeeRepository.findById(Mockito.<Long>any()))
@@ -623,7 +673,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test deleteEmployee(Long)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeServiceImpl.deleteEmployee(Long)"})
   void testDeleteEmployee2() {
     // Arrange
     Employee employee = new Employee();
@@ -659,7 +711,9 @@ class EmployeeServiceImplDiffblueTest {
   @Test
   @DisplayName(
       "Test deleteEmployee(Long); given EmployeeRepository delete(Object) does nothing; then calls delete(Object)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeServiceImpl.deleteEmployee(Long)"})
   void testDeleteEmployee_givenEmployeeRepositoryDeleteDoesNothing_thenCallsDelete() {
     // Arrange
     Employee employee = new Employee();
@@ -693,7 +747,9 @@ class EmployeeServiceImplDiffblueTest {
    */
   @Test
   @DisplayName("Test deleteEmployee(Long); then throw ResourceNotFoundException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeServiceImpl.deleteEmployee(Long)"})
   void testDeleteEmployee_thenThrowResourceNotFoundException() {
     // Arrange
     Optional<Employee> emptyResult = Optional.empty();

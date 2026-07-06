@@ -3,6 +3,8 @@ package com.volane.employee_crud.security.handler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.volane.employee_crud.dto.ApiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -31,7 +33,11 @@ class SecurityExceptionHandlerDiffblueTest {
    */
   @Test
   @DisplayName("Test handleAuthenticationException(AuthenticationException)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "ResponseEntity SecurityExceptionHandler.handleAuthenticationException(AuthenticationException)"
+  })
   void testHandleAuthenticationException() {
     // Arrange and Act
     ResponseEntity<ApiResponse<Void>> actualHandleAuthenticationExceptionResult =
@@ -58,7 +64,11 @@ class SecurityExceptionHandlerDiffblueTest {
    */
   @Test
   @DisplayName("Test handleAccessDeniedException(AccessDeniedException)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "ResponseEntity SecurityExceptionHandler.handleAccessDeniedException(AccessDeniedException)"
+  })
   void testHandleAccessDeniedException() {
     // Arrange and Act
     ResponseEntity<ApiResponse<Void>> actualHandleAccessDeniedExceptionResult =

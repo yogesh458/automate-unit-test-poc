@@ -1,6 +1,8 @@
 package com.volane.employee_crud.security.jwt;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -13,7 +15,9 @@ class JwtServiceDiffblueTest {
    */
   @Test
   @DisplayName("Test getExpirationMs()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"long JwtService.getExpirationMs()"})
   void testGetExpirationMs() {
     // Arrange, Act and Assert
     assertEquals(1L, new JwtService("Jwt Secret", 1L).getExpirationMs());

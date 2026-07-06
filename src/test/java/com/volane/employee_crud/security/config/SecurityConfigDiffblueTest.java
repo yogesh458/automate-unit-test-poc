@@ -2,6 +2,8 @@ package com.volane.employee_crud.security.config;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.volane.employee_crud.security.handler.JwtAccessDeniedHandler;
 import com.volane.employee_crud.security.handler.JwtAuthenticationEntryPoint;
 import com.volane.employee_crud.security.jwt.JwtAuthenticationFilter;
@@ -47,7 +49,11 @@ class SecurityConfigDiffblueTest {
   @Test
   @DisplayName(
       "Test authenticationManager(AuthenticationConfiguration); then return ProviderManager")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "AuthenticationManager SecurityConfig.authenticationManager(AuthenticationConfiguration)"
+  })
   void testAuthenticationManager_thenReturnProviderManager() throws Exception {
     // Arrange and Act
     AuthenticationManager actualAuthenticationManagerResult =

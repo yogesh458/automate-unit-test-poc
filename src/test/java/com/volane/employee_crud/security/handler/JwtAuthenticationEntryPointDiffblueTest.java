@@ -3,13 +3,19 @@ package com.volane.employee_crud.security.handler;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper.Builder;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,7 +56,11 @@ class JwtAuthenticationEntryPointDiffblueTest {
    */
   @Test
   @DisplayName("Test commence(HttpServletRequest, HttpServletResponse, AuthenticationException)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "void JwtAuthenticationEntryPoint.commence(HttpServletRequest, HttpServletResponse, AuthenticationException)"
+  })
   void testCommence() throws IOException {
     // Arrange
     JsonMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
@@ -75,52 +85,6 @@ class JwtAuthenticationEntryPointDiffblueTest {
    * AuthenticationException)}.
    *
    * <ul>
-   *   <li>Given {@code Object}.
-   *   <li>Then calls {@link Builder#findAndAddModules()}.
-   * </ul>
-   *
-   * <p>Method under test: {@link JwtAuthenticationEntryPoint#commence(HttpServletRequest,
-   * HttpServletResponse, AuthenticationException)}
-   */
-  @Test
-  @DisplayName(
-      "Test commence(HttpServletRequest, HttpServletResponse, AuthenticationException); given 'java.lang.Object'; then calls findAndAddModules()")
-  @Tag("MaintainedByDiffblue")
-  void testCommence_givenJavaLangObject_thenCallsFindAndAddModules() throws IOException {
-    // Arrange
-    JsonMapper m = JsonMapper.builder().findAndAddModules().build();
-
-    Builder builder = new Builder(m);
-    Class<Object> target = Object.class;
-    Class<Object> mixinSource = Object.class;
-
-    builder.addMixIn(target, mixinSource);
-
-    Builder builder2 = mock(Builder.class);
-    when(builder2.findAndAddModules()).thenReturn(builder);
-    JsonMapper objectMapper = builder2.findAndAddModules().build();
-    JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint =
-        new JwtAuthenticationEntryPoint(objectMapper);
-    MockHttpServletRequest request = new MockHttpServletRequest();
-    MockHttpServletResponse response = new MockHttpServletResponse();
-
-    // Act
-    jwtAuthenticationEntryPoint.commence(request, response, new AccountExpiredException("Msg"));
-
-    // Assert
-    verify(builder2).findAndAddModules();
-    Collection<String> headerNames = response.getHeaderNames();
-    assertEquals(1, headerNames.size());
-    assertTrue(headerNames instanceof Set);
-    assertEquals("application/json", response.getContentType());
-    assertEquals(401, response.getStatus());
-  }
-
-  /**
-   * Test {@link JwtAuthenticationEntryPoint#commence(HttpServletRequest, HttpServletResponse,
-   * AuthenticationException)}.
-   *
-   * <ul>
    *   <li>Given {@link ObjectMapper} {@link ObjectMapper#writeValue(OutputStream, Object)} throw
    *       {@link IOException#IOException()}.
    *   <li>Then throw {@link IOException}.
@@ -132,7 +96,11 @@ class JwtAuthenticationEntryPointDiffblueTest {
   @Test
   @DisplayName(
       "Test commence(HttpServletRequest, HttpServletResponse, AuthenticationException); given ObjectMapper writeValue(OutputStream, Object) throw IOException(); then throw IOException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "void JwtAuthenticationEntryPoint.commence(HttpServletRequest, HttpServletResponse, AuthenticationException)"
+  })
   void testCommence_givenObjectMapperWriteValueThrowIOException_thenThrowIOException()
       throws IOException {
     // Arrange
@@ -156,6 +124,56 @@ class JwtAuthenticationEntryPointDiffblueTest {
    * AuthenticationException)}.
    *
    * <ul>
+   *   <li>Then calls {@link JsonFactory#createGenerator(OutputStream, JsonEncoding)}.
+   * </ul>
+   *
+   * <p>Method under test: {@link JwtAuthenticationEntryPoint#commence(HttpServletRequest,
+   * HttpServletResponse, AuthenticationException)}
+   */
+  @Test
+  @DisplayName(
+      "Test commence(HttpServletRequest, HttpServletResponse, AuthenticationException); then calls createGenerator(OutputStream, JsonEncoding)")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "void JwtAuthenticationEntryPoint.commence(HttpServletRequest, HttpServletResponse, AuthenticationException)"
+  })
+  void testCommence_thenCallsCreateGenerator() throws IOException {
+    // Arrange
+    JsonFactory streamFactory = mock(JsonFactory.class);
+    when(streamFactory.requiresPropertyOrdering()).thenReturn(true);
+    when(streamFactory.createGenerator(Mockito.<OutputStream>any(), Mockito.<JsonEncoding>any()))
+        .thenThrow(new IOException());
+    when(streamFactory.getCodec()).thenReturn(JsonMapper.builder().findAndAddModules().build());
+
+    Builder builderResult = JsonMapper.builder(streamFactory);
+    builderResult.annotationIntrospector(mock(AnnotationIntrospectorPair.class));
+
+    Builder builder = mock(Builder.class);
+    when(builder.findAndAddModules()).thenReturn(builderResult);
+    JsonMapper objectMapper = builder.findAndAddModules().build();
+    JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint =
+        new JwtAuthenticationEntryPoint(objectMapper);
+    MockHttpServletRequest request = new MockHttpServletRequest();
+    MockHttpServletResponse response = new MockHttpServletResponse();
+
+    // Act and Assert
+    assertThrows(
+        IOException.class,
+        () ->
+            jwtAuthenticationEntryPoint.commence(
+                request, response, new AccountExpiredException("Msg")));
+    verify(streamFactory).createGenerator(isA(OutputStream.class), eq(JsonEncoding.UTF8));
+    verify(streamFactory).getCodec();
+    verify(streamFactory).requiresPropertyOrdering();
+    verify(builder).findAndAddModules();
+  }
+
+  /**
+   * Test {@link JwtAuthenticationEntryPoint#commence(HttpServletRequest, HttpServletResponse,
+   * AuthenticationException)}.
+   *
+   * <ul>
    *   <li>Then {@link MockHttpServletResponse} (default constructor) HeaderNames contains {@code
    *       Content-Type}.
    * </ul>
@@ -166,7 +184,11 @@ class JwtAuthenticationEntryPointDiffblueTest {
   @Test
   @DisplayName(
       "Test commence(HttpServletRequest, HttpServletResponse, AuthenticationException); then MockHttpServletResponse (default constructor) HeaderNames contains 'Content-Type'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "void JwtAuthenticationEntryPoint.commence(HttpServletRequest, HttpServletResponse, AuthenticationException)"
+  })
   void testCommence_thenMockHttpServletResponseHeaderNamesContainsContentType() throws IOException {
     // Arrange
     doNothing().when(objectMapper).writeValue(Mockito.<OutputStream>any(), Mockito.<Object>any());

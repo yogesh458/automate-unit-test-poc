@@ -2,6 +2,8 @@ package com.volane.employee_crud.security.config;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.volane.employee_crud.security.service.AdminUserDetailsService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -21,7 +23,9 @@ class AuthenticationProviderConfigDiffblueTest {
    */
   @Test
   @DisplayName("Test passwordEncoder()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"PasswordEncoder AuthenticationProviderConfig.passwordEncoder()"})
   void testPasswordEncoder() {
     // Arrange, Act and Assert
     assertTrue(
@@ -42,7 +46,11 @@ class AuthenticationProviderConfigDiffblueTest {
   @Test
   @DisplayName(
       "Test authenticationProvider(UserDetailsService, PasswordEncoder); given AuthenticationProviderConfig (default constructor)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "AuthenticationProvider AuthenticationProviderConfig.authenticationProvider(UserDetailsService, PasswordEncoder)"
+  })
   void testAuthenticationProvider_givenAuthenticationProviderConfig() {
     // Arrange
     AuthenticationProviderConfig authenticationProviderConfig = new AuthenticationProviderConfig();

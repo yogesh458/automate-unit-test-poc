@@ -6,6 +6,8 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.volane.employee_crud.security.handler.JwtAuthenticationEntryPoint;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -57,7 +59,11 @@ class JwtAuthenticationFilterDiffblueTest {
   @Test
   @DisplayName(
       "Test doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain); given 'Authorization'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "void JwtAuthenticationFilter.doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)"
+  })
   void testDoFilterInternal_givenAuthorization() throws ServletException, IOException {
     // Arrange
     MockHttpServletRequest request = new MockHttpServletRequest();
@@ -90,7 +96,11 @@ class JwtAuthenticationFilterDiffblueTest {
   @Test
   @DisplayName(
       "Test doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain); then throw JwtException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "void JwtAuthenticationFilter.doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)"
+  })
   void testDoFilterInternal_thenThrowJwtException() throws ServletException, IOException {
     // Arrange
     MockHttpServletRequest request = new MockHttpServletRequest();
@@ -124,7 +134,11 @@ class JwtAuthenticationFilterDiffblueTest {
   @Test
   @DisplayName(
       "Test doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain); when FilterChain doFilter(ServletRequest, ServletResponse) does nothing; then calls doFilter(ServletRequest, ServletResponse)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "void JwtAuthenticationFilter.doFilterInternal(HttpServletRequest, HttpServletResponse, FilterChain)"
+  })
   void testDoFilterInternal_whenFilterChainDoFilterDoesNothing_thenCallsDoFilter()
       throws ServletException, IOException {
     // Arrange

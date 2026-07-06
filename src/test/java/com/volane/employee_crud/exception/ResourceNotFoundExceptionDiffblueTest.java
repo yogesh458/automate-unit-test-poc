@@ -2,6 +2,8 @@ package com.volane.employee_crud.exception;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -14,7 +16,9 @@ class ResourceNotFoundExceptionDiffblueTest {
    */
   @Test
   @DisplayName("Test new ResourceNotFoundException(String)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void ResourceNotFoundException.<init>(String)"})
   void testNewResourceNotFoundException() {
     // Arrange and Act
     ResourceNotFoundException actualResourceNotFoundException =

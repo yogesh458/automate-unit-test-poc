@@ -2,6 +2,8 @@ package com.volane.employee_crud.controller;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.volane.employee_crud.dto.auth.LoginRequest;
 import com.volane.employee_crud.exception.GlobalExceptionHandler;
@@ -57,7 +59,9 @@ class AuthControllerDiffblueTest {
   @Test
   @DisplayName(
       "Test login(LoginRequest); given array of String with 'Bearer'; when post(String, Object[]) '/auth/login' accept 'Bearer'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"org.springframework.http.ResponseEntity AuthController.login(LoginRequest)"})
   void testLogin_givenArrayOfStringWithBearer_whenPostAuthLoginAcceptBearer() throws Exception {
     // Arrange
     when(jwtService.generateToken(Mockito.<UserDetails>any())).thenReturn("ABC123");

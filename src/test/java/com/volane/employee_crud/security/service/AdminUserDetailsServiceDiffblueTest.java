@@ -3,6 +3,8 @@ package com.volane.employee_crud.security.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import java.util.Collection;
 import java.util.Set;
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +28,9 @@ class AdminUserDetailsServiceDiffblueTest {
    */
   @Test
   @DisplayName("Test loadUserByUsername(String); then return Authorities size is one")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"UserDetails AdminUserDetailsService.loadUserByUsername(String)"})
   void testLoadUserByUsername_thenReturnAuthoritiesSizeIsOne() throws UsernameNotFoundException {
     // Arrange
     AdminUserDetailsService adminUserDetailsService =
@@ -60,7 +64,9 @@ class AdminUserDetailsServiceDiffblueTest {
    */
   @Test
   @DisplayName("Test loadUserByUsername(String); then throw UsernameNotFoundException")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"UserDetails AdminUserDetailsService.loadUserByUsername(String)"})
   void testLoadUserByUsername_thenThrowUsernameNotFoundException()
       throws UsernameNotFoundException {
     // Arrange

@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.volane.employee_crud.entity.Employee;
 import java.util.ArrayList;
 import java.util.List;
@@ -42,7 +44,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test existsByEmployeeId(String); given Employee() EmployeeId is '42'; then return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmployeeId(String)"})
   void testExistsByEmployeeId_givenEmployeeEmployeeIdIs42_thenReturnTrue() {
     // Arrange
     Employee employee = new Employee();
@@ -80,7 +84,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test existsByEmployeeId(String); given Employee() EmployeeId is empty string; then return 'false'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmployeeId(String)"})
   void testExistsByEmployeeId_givenEmployeeEmployeeIdIsEmptyString_thenReturnFalse() {
     // Arrange
     Employee employee = new Employee();
@@ -118,7 +124,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test existsByEmail(String); given Employee() Email is 'jane.doe@example.org'; then return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmail(String)"})
   void testExistsByEmail_givenEmployeeEmailIsJaneDoeExampleOrg_thenReturnTrue() {
     // Arrange
     Employee employee = new Employee();
@@ -156,7 +164,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test existsByEmail(String); given Employee() Email is 'prof.einstein@example.org'; then return 'false'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmail(String)"})
   void testExistsByEmail_givenEmployeeEmailIsProfEinsteinExampleOrg_thenReturnFalse() {
     // Arrange
     Employee employee = new Employee();
@@ -194,7 +204,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test existsByEmployeeIdAndIdNot(String, Long); given Employee() EmployeeId is '42'; then return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmployeeIdAndIdNot(String, Long)"})
   void testExistsByEmployeeIdAndIdNot_givenEmployeeEmployeeIdIs42_thenReturnTrue() {
     // Arrange
     Employee employee = new Employee();
@@ -230,7 +242,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test existsByEmployeeIdAndIdNot(String, Long); then return 'false'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmployeeIdAndIdNot(String, Long)"})
   void testExistsByEmployeeIdAndIdNot_thenReturnFalse() {
     // Arrange
     Employee employee = new Employee();
@@ -268,7 +282,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test existsByEmailAndIdNot(String, Long); given Employee() Email is 'jane.doe@example.org'; then return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmailAndIdNot(String, Long)"})
   void testExistsByEmailAndIdNot_givenEmployeeEmailIsJaneDoeExampleOrg_thenReturnTrue() {
     // Arrange
     Employee employee = new Employee();
@@ -304,7 +320,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test existsByEmailAndIdNot(String, Long); then return 'false'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.existsByEmailAndIdNot(String, Long)"})
   void testExistsByEmailAndIdNot_thenReturnFalse() {
     // Arrange
     Employee employee = new Employee();
@@ -336,7 +354,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test count()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"long EmployeeRepository.count()"})
   void testCount() {
     // Arrange
     Employee employee = new Employee();
@@ -368,7 +388,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test count(Example) with 'Example'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"long EmployeeRepository.count(Example)"})
   void testCountWithExample() {
     // Arrange
     Employee employee = new Employee();
@@ -409,7 +431,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test deleteAll()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeRepository.deleteAll()"})
   void testDeleteAll() {
     // Arrange
     Employee employee = new Employee();
@@ -444,7 +468,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test deleteAllByIdInBatch(Iterable)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeRepository.deleteAllByIdInBatch(Iterable)"})
   void testDeleteAllByIdInBatch() {
     // Arrange
     Employee employee = new Employee();
@@ -482,7 +508,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test deleteAllInBatch()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeRepository.deleteAllInBatch()"})
   void testDeleteAllInBatch() {
     // Arrange
     Employee employee = new Employee();
@@ -523,7 +551,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test exists(Example); given Employee() Department is 'Department'; then return 'true'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.exists(Example)"})
   void testExists_givenEmployeeDepartmentIsDepartment_thenReturnTrue() {
     // Arrange
     Employee employee = new Employee();
@@ -568,7 +598,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test exists(Example); then return 'false'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"boolean EmployeeRepository.exists(Example)"})
   void testExists_thenReturnFalse() {
     // Arrange
     Employee employee = new Employee();
@@ -609,7 +641,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test findAll()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeRepository.findAll()"})
   void testFindAll() {
     // Arrange
     Employee employee = new Employee();
@@ -646,7 +680,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test findAll(Example) with 'example'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeRepository.findAll(Example)"})
   void testFindAllWithExample() {
     // Arrange
     Employee employee = new Employee();
@@ -692,7 +728,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test findAll(Example, Pageable) with 'example', 'pageable'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"Page EmployeeRepository.findAll(Example, Pageable)"})
   void testFindAllWithExamplePageable() {
     // Arrange
     Employee employee = new Employee();
@@ -745,7 +783,9 @@ class EmployeeRepositoryDiffblueTest {
   @Test
   @DisplayName(
       "Test findAll(Example, Sort) with 'example', 'sort'; when unsorted; then return size is one")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeRepository.findAll(Example, Sort)"})
   void testFindAllWithExampleSort_whenUnsorted_thenReturnSizeIsOne() {
     // Arrange
     Employee employee = new Employee();
@@ -790,7 +830,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test findAll(Pageable) with 'pageable'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"Page EmployeeRepository.findAll(Pageable)"})
   void testFindAllWithPageable() {
     // Arrange
     Employee employee = new Employee();
@@ -834,7 +876,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test findAll(Sort) with 'sort'; when unsorted; then return size is two")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"List EmployeeRepository.findAll(Sort)"})
   void testFindAllWithSort_whenUnsorted_thenReturnSizeIsTwo() {
     // Arrange
     Employee employee = new Employee();
@@ -871,7 +915,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test findOne(Example)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"Optional EmployeeRepository.findOne(Example)"})
   void testFindOne() {
     // Arrange
     Employee employee = new Employee();
@@ -916,7 +962,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test flush()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"void EmployeeRepository.flush()"})
   void testFlush() {
     // Arrange
     Employee employee = new Employee();
@@ -954,7 +1002,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test getOne(Object)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"Object EmployeeRepository.getOne(Object)"})
   void testGetOne() {
     // Arrange
     Employee employee = new Employee();
@@ -989,7 +1039,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test save(Object)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"Object EmployeeRepository.save(Object)"})
   void testSave() {
     // Arrange
     Employee employee = new Employee();
@@ -1014,7 +1066,9 @@ class EmployeeRepositoryDiffblueTest {
    */
   @Test
   @DisplayName("Test saveAndFlush(Object)")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({"Object EmployeeRepository.saveAndFlush(Object)"})
   void testSaveAndFlush() {
     // Arrange
     Employee employee = new Employee();

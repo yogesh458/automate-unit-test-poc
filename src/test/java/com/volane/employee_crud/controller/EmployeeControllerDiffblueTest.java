@@ -3,6 +3,8 @@ package com.volane.employee_crud.controller;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.diffblue.cover.annotations.ManagedByDiffblue;
+import com.diffblue.cover.annotations.MethodsUnderTest;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.volane.employee_crud.dto.EmployeeRequestDto;
 import com.volane.employee_crud.dto.EmployeeResponseDto;
@@ -56,7 +58,11 @@ class EmployeeControllerDiffblueTest {
   @Test
   @DisplayName(
       "Test createEmployee(EmployeeRequestDto); given array of String with 'U.U.U'; then status isInternalServerError()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "org.springframework.http.ResponseEntity EmployeeController.createEmployee(EmployeeRequestDto)"
+  })
   void testCreateEmployee_givenArrayOfStringWithUUU_thenStatusIsInternalServerError()
       throws Exception {
     // Arrange
@@ -112,7 +118,11 @@ class EmployeeControllerDiffblueTest {
   @Test
   @DisplayName(
       "Test getEmployeeById(Long); given array of String with 'Employee fetched successfully'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "org.springframework.http.ResponseEntity EmployeeController.getEmployeeById(Long)"
+  })
   void testGetEmployeeById_givenArrayOfStringWithEmployeeFetchedSuccessfully() throws Exception {
     // Arrange
     when(employeeService.getEmployeeById(Mockito.<Long>any()))
@@ -150,7 +160,11 @@ class EmployeeControllerDiffblueTest {
    */
   @Test
   @DisplayName("Test getAllEmployees(); then status isInternalServerError()")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "org.springframework.http.ResponseEntity EmployeeController.getAllEmployees()"
+  })
   void testGetAllEmployees_thenStatusIsInternalServerError() throws Exception {
     // Arrange
     when(employeeService.getAllEmployees()).thenReturn(new ArrayList<>());
@@ -180,7 +194,11 @@ class EmployeeControllerDiffblueTest {
   @Test
   @DisplayName(
       "Test updateEmployee(Long, EmployeeRequestDto); given array of String with 'U.U.U'; when put(String, Object[]) '/api/employees/{id}' one accept 'U.U.U'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "org.springframework.http.ResponseEntity EmployeeController.updateEmployee(Long, EmployeeRequestDto)"
+  })
   void testUpdateEmployee_givenArrayOfStringWithUUU_whenPutApiEmployeesIdOneAcceptUUU()
       throws Exception {
     // Arrange
@@ -236,7 +254,11 @@ class EmployeeControllerDiffblueTest {
   @Test
   @DisplayName(
       "Test deleteEmployee(Long); given array of String with 'Employee deleted successfully'")
-  @Tag("MaintainedByDiffblue")
+  @Tag("ContributionFromDiffblue")
+  @ManagedByDiffblue
+  @MethodsUnderTest({
+    "org.springframework.http.ResponseEntity EmployeeController.deleteEmployee(Long)"
+  })
   void testDeleteEmployee_givenArrayOfStringWithEmployeeDeletedSuccessfully() throws Exception {
     // Arrange
     doNothing().when(employeeService).deleteEmployee(Mockito.<Long>any());
