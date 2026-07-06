@@ -33,19 +33,16 @@ jobs:
           access-token: ${{ secrets.DIFFBLUE_ACCESS_TOKEN }}
           license-key: ${{ secrets.DIFFBLUE_LICENSE_KEY }}
 
-      # 4. Fix ownership — Diffblue action runs as root in a container,
-      #    which leaves target/ owned by root and blocks later steps
-      - name: Fix workspace permissions
-        run: sudo chown -R $(whoami):$(whoami) ${{ github.workspace }}
+      # 4. Clean target/ — Diffblue's container leaves it root-owned
+      #    with restrictive permissions; delete and let Maven rebuild fresh
+      - name: Clean workspace before build
+        run: sudo rm -rf target
 
       # 5. Run all unit tests
-      # JaCoCo also collects coverage via the plugin bound to test phase
       - name: Run Unit Tests
         run: mvn test
 
       # 6. Generate Unit Test HTML report
-      #    Using 'report' (not 'report-only') so it also pulls in the
-      #    skin/CSS resources it needs — report-only skips that step
       - name: Generate Unit Test HTML Report
         if: always()
         run: mvn surefire-report:report
