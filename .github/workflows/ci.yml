@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-html-report
-          path: target/site/surefire-report.html
+          path: target/site/
           retention-days: 14
 
       # 8. Upload raw test results
