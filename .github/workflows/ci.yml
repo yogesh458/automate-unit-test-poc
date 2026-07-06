@@ -1,0 +1,61 @@
+name: Diffblue AI Unit Test POC
+
+on:
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  diffblue-cover:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout your Spring Boot code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Diffblue automatically analyzes code
+      # and generates/updates Java unit tests
+      - name: Diffblue Cover - Generate Unit Tests
+        uses: diffblue/cover-github-action/jdk17@main
+        env:
+          JVM_ARGS: -Xmx4096m
+        with:
+          access-token: ${{ secrets.DIFFBLUE_ACCESS_TOKEN }}
+          license-key: ${{ secrets.DIFFBLUE_LICENSE_KEY }}
+
+      # Step 3: Run all unit tests
+      - name: Run Unit Tests
+        run: mvn test
+
+      # Step 4: ALLOW when everything passes
+      - name: Deployment Decision - ALLOW
+        if: success()
+        run: |
+          echo "================================"
+          echo "DEPLOYMENT DECISION: ALLOW"
+          echo "Diffblue completed successfully"
+          echo "All unit tests passed"
+          echo "================================"
+
+      # Step 5: BLOCK when anything fails
+      - name: Deployment Decision - BLOCK
+        if: failure()
+        run: |
+          echo "================================"
+          echo "DEPLOYMENT DECISION: BLOCK"
+          echo "AI generation or unit tests failed"
+          echo "================================"
+
+      # Step 6: Save Diffblue logs
+      - name: Upload Diffblue Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diffblue-logs
+          path: |
+            **/.diffblue/**
