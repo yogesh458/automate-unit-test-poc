@@ -32,6 +32,7 @@ jobs:
         with:
           access-token: ${{ secrets.DIFFBLUE_ACCESS_TOKEN }}
           license-key: ${{ secrets.DIFFBLUE_LICENSE_KEY }}
+          target: "com.volane.employeecrud.service.EmployeeService"
 
       # 4. Clean target/ — Diffblue's container leaves it root-owned
       #    with restrictive permissions; delete and let Maven rebuild fresh
