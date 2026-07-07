@@ -1,7 +1,6 @@
 name: Copilot Test - EmployeeServiceImpl only
 
-# Fires automatically the moment you push a new branch (any branch except main).
-# Same trigger style you used for the Diffblue branch test yesterday.
+# Fires automatically the moment you push to this branch (any branch except main).
 on:
   push:
     branches-ignore:
@@ -11,6 +10,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  copilot-requests: write
 
 jobs:
   copilot-generate-test:
@@ -42,7 +42,7 @@ jobs:
 
       - name: Generate/update test with Copilot CLI
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           copilot -p "This is a Spring Boot project (group com.volane, project employee-crud). Look at ${{ steps.locate.outputs.file }}. Generate or update its JUnit 5 test class under src/test/java, mirroring the same package path, named EmployeeServiceImplTest. Cover: happy path for each public method, null/invalid input, and not-found case. Tag basic CRUD create/read tests with @Tag(\"smoke\"). Write the file directly to disk, do not just print code." \
             --allow-all-tools --allow-all-paths
@@ -56,6 +56,7 @@ jobs:
             echo "No changes to commit."
           else
             git commit -m "chore: Copilot-generated test for EmployeeServiceImpl [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi
 
