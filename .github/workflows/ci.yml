@@ -1,98 +1,98 @@
-name: Diffblue AI Unit Test POC
+name: Copilot Test - EmployeeServiceImpl only
 
+# Fires automatically the moment you push a new branch (any branch except main).
+# Same trigger style you used for the Diffblue branch test yesterday.
 on:
-  pull_request:
-    branches:
+  push:
+    branches-ignore:
       - main
+  workflow_dispatch: {}   # also lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+  copilot-requests: write
 
 jobs:
-  diffblue-cover:
+  copilot-generate-test:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. Checkout project
-      - name: Checkout Code
+      - name: Checkout branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Setup Java
-      - name: Setup Java 17
+      - name: Set up Node.js (for Copilot CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install/Update GitHub Copilot CLI
+        run: npm install -g @github/copilot && copilot update || true
+
+      - name: Locate EmployeeServiceImpl.java
+        id: locate
+        run: |
+          FILE=$(find src/main/java -name "EmployeeServiceImpl.java" | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "EmployeeServiceImpl.java not found in src/main/java — check the path/class name."
+            exit 1
+          fi
+          echo "Found: $FILE"
+          echo "file=$FILE" >> $GITHUB_OUTPUT
+
+      - name: Generate/update test with Copilot CLI
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          copilot -p "This is a Spring Boot project (group com.volane, project employee-crud). Look at ${{ steps.locate.outputs.file }}. Generate or update its JUnit 5 test class under src/test/java, mirroring the same package path, named EmployeeServiceImplTest. Cover: happy path for each public method, null/invalid input, and not-found case. Tag basic CRUD create/read tests with @Tag(\"smoke\"). Write the file directly to disk, do not just print code." \
+            --allow-all-tools --allow-all-paths
+
+      - name: Commit generated test
+        run: |
+          git config user.name "copilot-bot"
+          git config user.email "copilot-bot@users.noreply.github.com"
+          git add src/test/java
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: Copilot-generated test for EmployeeServiceImpl [skip ci]"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+  smoke-test:
+    needs: copilot-generate-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest (including Copilot-generated test)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
           java-version: '17'
+          distribution: 'temurin'
           cache: maven
 
-      # 3. AI analyzes code and generates tests
-      - name: Diffblue Cover - Generate Unit Tests
-        uses: diffblue/cover-github-action/jdk17@main
-        env:
-          JVM_ARGS: -Xmx4096m
-        with:
-          access-token: ${{ secrets.DIFFBLUE_ACCESS_TOKEN }}
-          license-key: ${{ secrets.DIFFBLUE_LICENSE_KEY }}
+      - name: Run smoke-tagged tests
+        run: mvn test -Psmoke
 
-      # 4. Clean target/ — Diffblue's container leaves it root-owned
-      #    with restrictive permissions; delete and let Maven rebuild fresh
-      - name: Clean workspace before build
-        run: sudo rm -rf target
-
-      # 5. Run all unit tests
-      - name: Run Unit Tests
-        run: mvn test
-
-      # 6. Generate Unit Test HTML report
-      - name: Generate Unit Test HTML Report
+      - name: Generate Allure HTML report
         if: always()
-        run: mvn surefire-report:report
+        run: mvn io.qameta.allure:allure-maven:report
 
-      # 7. Generate JaCoCo HTML report
-      - name: Generate JaCoCo Coverage Report
-        if: always()
-        run: mvn jacoco:report
-
-      # 8. Upload Unit Test HTML report
-      - name: Upload Unit Test HTML Report
+      - name: Upload Allure report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-html-report
-          path: target/site/
-          retention-days: 14
+          name: allure-report
+          path: target/site/allure-maven-plugin/
 
-      # 9. Upload raw test results
-      - name: Upload Raw Unit Test Results
+      - name: Upload Surefire report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: unit-test-raw-results
+          name: smoke-test-report
           path: target/surefire-reports/
-          retention-days: 14
-
-      # 10. Upload JaCoCo HTML report
-      - name: Upload JaCoCo Coverage Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: jacoco-html-report
-          path: target/site/jacoco/
-          retention-days: 14
-
-      # 11. ALLOW
-      - name: Deployment Decision - ALLOW
-        if: success()
-        run: |
-          echo "================================"
-          echo "DEPLOYMENT DECISION: ALLOW"
-          echo "AI-generated unit tests passed"
-          echo "================================"
-
-      # 12. BLOCK
-      - name: Deployment Decision - BLOCK
-        if: failure()
-        run: |
-          echo "================================"
-          echo "DEPLOYMENT DECISION: BLOCK"
-          echo "One or more required steps failed"
-          echo "================================"
