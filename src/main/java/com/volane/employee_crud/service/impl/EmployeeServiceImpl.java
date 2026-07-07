@@ -62,6 +62,19 @@ public class EmployeeServiceImpl implements EmployeeService {
         employeeRepository.delete(employee);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<EmployeeResponseDto> getEmployeesByDepartment(String department) {
+        return employeeRepository.findAll()
+                .stream()
+                .filter(employee ->
+                        employee.getDepartment() != null &&
+                                employee.getDepartment().equalsIgnoreCase(department)
+                )
+                .map(this::mapToResponseDto)
+                .toList();
+    }
+
     private Employee findEmployeeById(Long id) {
         return employeeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));

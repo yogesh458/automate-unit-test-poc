@@ -1,0 +1,944 @@
+name: Copilot Auto Unit Tests - Changed Methods Only
+
+on:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  copilot-requests: write
+
+concurrency:
+  group: copilot-unit-tests-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  copilot-generate-tests:
+    runs-on: ubuntu-latest
+
+    outputs:
+      any_changes: ${{ steps.detect.outputs.any_changes }}
+      test_classes: ${{ steps.generate.outputs.test_classes }}
+
+    steps:
+      # ============================================================
+      # 1. CHECKOUT FULL HISTORY
+      # ============================================================
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ============================================================
+      # 2. SETUP JAVA
+      # Needed because we compile generated tests in this job
+      # ============================================================
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # ============================================================
+      # 3. SETUP NODE.JS
+      # ============================================================
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # ============================================================
+      # 4. INSTALL COPILOT CLI
+      # ============================================================
+      - name: Install GitHub Copilot CLI
+        run: |
+          set -e
+          npm install -g @github/copilot
+          copilot --version
+
+      # ============================================================
+      # 5. DETECT BASE SHA + CHANGED PRODUCTION JAVA FILES
+      # ============================================================
+      - name: Detect changed Java source files
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ZERO_SHA="0000000000000000000000000000000000000000"
+
+          # --------------------------------------------------------
+          # Resolve BASE_SHA
+          # --------------------------------------------------------
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BASE_SHA="${{ github.event.before }}"
+          else
+            BASE_SHA=""
+          fi
+
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "$ZERO_SHA" ]; then
+            BASE_SHA=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+          fi
+
+          HEAD_SHA=$(git rev-parse HEAD)
+
+          echo "BASE_SHA=$BASE_SHA"
+          echo "HEAD_SHA=$HEAD_SHA"
+
+          # --------------------------------------------------------
+          # Detect changed production Java files
+          # --------------------------------------------------------
+          if [ -z "$BASE_SHA" ]; then
+            echo "No previous commit available."
+            echo "Treating all production Java files as changed."
+
+            CHANGED_FILES=$(find src/main/java \
+              -type f \
+              -name "*.java" \
+              | sort || true)
+          else
+            CHANGED_FILES=$(git diff \
+              --name-only \
+              --diff-filter=ACMR \
+              "$BASE_SHA" \
+              "$HEAD_SHA" \
+              -- 'src/main/java/**/*.java' \
+              | sort -u || true)
+          fi
+
+          # --------------------------------------------------------
+          # Keep only existing files
+          # --------------------------------------------------------
+          VALID_FILES=""
+
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+
+            if [ -f "$FILE" ]; then
+              VALID_FILES="${VALID_FILES}${FILE}"$'\n'
+            fi
+          done <<< "$CHANGED_FILES"
+
+          CHANGED_FILES=$(printf "%s" "$VALID_FILES" \
+            | sed '/^[[:space:]]*$/d' || true)
+
+          # --------------------------------------------------------
+          # No source changes
+          # --------------------------------------------------------
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "================================================"
+            echo "NO PRODUCTION JAVA CHANGES DETECTED"
+            echo "================================================"
+
+            echo "any_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "================================================"
+          echo "CHANGED PRODUCTION JAVA FILES"
+          echo "================================================"
+          echo "$CHANGED_FILES"
+
+          echo "any_changes=true" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "changed_files<<EOF"
+            echo "$CHANGED_FILES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # ============================================================
+      # 6. CREATE CHANGED-METHOD DETECTOR
+      #
+      # Purpose:
+      #   Git diff gives changed line numbers.
+      #   This script maps those lines to Java methods.
+      #
+      # Output example:
+      #   updateEmployee
+      #   deleteEmployee
+      #
+      # Note:
+      #   Lightweight parser, not full Java AST.
+      # ============================================================
+      - name: Create changed method detector
+        if: steps.detect.outputs.any_changes == 'true'
+        shell: bash
+        run: |
+          mkdir -p .ci-tools
+
+          cat > .ci-tools/detect_changed_methods.py <<'PYTHON'
+          import re
+          import sys
+          import subprocess
+          from pathlib import Path
+
+
+          CONTROL_WORDS = {
+              "if",
+              "for",
+              "while",
+              "switch",
+              "catch",
+              "return",
+              "throw",
+              "new",
+              "synchronized",
+              "do",
+              "else",
+              "try"
+          }
+
+
+          def run_git_diff(base_sha, head_sha, file_path):
+              if not base_sha:
+                  return ""
+
+              result = subprocess.run(
+                  [
+                      "git",
+                      "diff",
+                      "--unified=0",
+                      base_sha,
+                      head_sha,
+                      "--",
+                      file_path
+                  ],
+                  capture_output=True,
+                  text=True,
+                  check=False
+              )
+
+              return result.stdout
+
+
+          def changed_new_line_numbers(diff_text):
+              changed = set()
+
+              # Example hunk:
+              # @@ -20,2 +20,5 @@
+              pattern = re.compile(
+                  r"@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@"
+              )
+
+              for line in diff_text.splitlines():
+                  match = pattern.search(line)
+
+                  if not match:
+                      continue
+
+                  start = int(match.group(1))
+                  count = int(match.group(2) or "1")
+
+                  if count == 0:
+                      continue
+
+                  for number in range(start, start + count):
+                      changed.add(number)
+
+              return changed
+
+
+          def strip_strings_and_comments(line):
+              line = re.sub(r'"(?:\\.|[^"\\])*"', '""', line)
+              line = re.sub(r"'(?:\\.|[^'\\])*'", "''", line)
+              line = re.sub(r"//.*$", "", line)
+              return line
+
+
+          def detect_methods(source_lines):
+              methods = []
+
+              # Handles common Java method declarations:
+              #
+              # public Employee updateEmployee(...)
+              # protected void process(...)
+              # private static String build(...)
+              #
+              # Also allows annotations/generics/modifiers in common forms.
+              method_pattern = re.compile(
+                  r"""
+                  ^\s*
+                  (?:
+                      public|protected|private
+                  )
+                  \s+
+                  (?:
+                      static\s+|
+                      final\s+|
+                      synchronized\s+|
+                      abstract\s+|
+                      native\s+|
+                      strictfp\s+
+                  )*
+                  (?:<[^>]+>\s+)?
+                  [\w\[\]<>?,.\s]+
+                  \s+
+                  (?P<name>[A-Za-z_$][A-Za-z0-9_$]*)
+                  \s*
+                  \(
+                  """,
+                  re.VERBOSE
+              )
+
+              i = 0
+
+              while i < len(source_lines):
+                  start_index = i
+                  candidate = strip_strings_and_comments(source_lines[i]).strip()
+
+                  # Join multiline signatures until "(" and "{" or ";"
+                  if (
+                      candidate
+                      and not candidate.startswith("@")
+                      and "(" in candidate
+                  ):
+                      combined = candidate
+                  else:
+                      combined = candidate
+
+                  j = i
+
+                  while (
+                      j + 1 < len(source_lines)
+                      and "(" in combined
+                      and "{" not in combined
+                      and ";" not in combined
+                      and len(combined) < 1000
+                  ):
+                      j += 1
+                      combined += " " + strip_strings_and_comments(
+                          source_lines[j]
+                      ).strip()
+
+                  match = method_pattern.search(combined)
+
+                  if not match:
+                      i += 1
+                      continue
+
+                  method_name = match.group("name")
+
+                  if method_name in CONTROL_WORDS:
+                      i += 1
+                      continue
+
+                  # Ignore declarations without body
+                  if ";" in combined and "{" not in combined:
+                      i = j + 1
+                      continue
+
+                  # Find opening brace
+                  brace_line = start_index
+                  found_open = False
+
+                  for k in range(start_index, min(j + 3, len(source_lines))):
+                      cleaned = strip_strings_and_comments(source_lines[k])
+
+                      if "{" in cleaned:
+                          brace_line = k
+                          found_open = True
+                          break
+
+                  if not found_open:
+                      i += 1
+                      continue
+
+                  # Track braces to method end
+                  depth = 0
+                  end_line = brace_line
+
+                  for k in range(brace_line, len(source_lines)):
+                      cleaned = strip_strings_and_comments(source_lines[k])
+
+                      depth += cleaned.count("{")
+                      depth -= cleaned.count("}")
+
+                      if depth == 0:
+                          end_line = k
+                          break
+
+                  methods.append(
+                      {
+                          "name": method_name,
+                          "start": start_index + 1,
+                          "end": end_line + 1
+                      }
+                  )
+
+                  i = max(i + 1, j + 1)
+
+              return methods
+
+
+          def main():
+              if len(sys.argv) != 4:
+                  print(
+                      "Usage: detect_changed_methods.py "
+                      "<base_sha> <head_sha> <file>"
+                  )
+                  sys.exit(1)
+
+              base_sha = sys.argv[1]
+              head_sha = sys.argv[2]
+              file_path = sys.argv[3]
+
+              source = Path(file_path)
+
+              if not source.exists():
+                  sys.exit(0)
+
+              lines = source.read_text(
+                  encoding="utf-8",
+                  errors="ignore"
+              ).splitlines()
+
+              methods = detect_methods(lines)
+
+              # First run: no base SHA
+              # Treat all detected methods as changed
+              if not base_sha:
+                  for method in methods:
+                      print(method["name"])
+                  return
+
+              diff_text = run_git_diff(
+                  base_sha,
+                  head_sha,
+                  file_path
+              )
+
+              changed_lines = changed_new_line_numbers(diff_text)
+
+              affected = []
+
+              for method in methods:
+                  method_range = range(
+                      method["start"],
+                      method["end"] + 1
+                  )
+
+                  if any(line in changed_lines for line in method_range):
+                      affected.append(method["name"])
+
+              for name in sorted(set(affected)):
+                  print(name)
+
+
+          if __name__ == "__main__":
+              main()
+          PYTHON
+
+      # ============================================================
+      # 7. GENERATE/UPDATE TESTS FOR CHANGED METHODS ONLY
+      # ============================================================
+      - name: Generate or update affected unit tests
+        if: steps.detect.outputs.any_changes == 'true'
+        id: generate
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ steps.detect.outputs.base_sha }}
+          HEAD_SHA: ${{ steps.detect.outputs.head_sha }}
+          CHANGED_FILES: ${{ steps.detect.outputs.changed_files }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p .copilot-context
+
+          TEST_CLASSES=""
+
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+
+            echo ""
+            echo "================================================"
+            echo "PROCESSING"
+            echo "================================================"
+            echo "Source: $FILE"
+
+            CLASS_NAME=$(basename "$FILE" .java)
+            TEST_CLASS="${CLASS_NAME}Test"
+
+            RELATIVE_PATH="${FILE#src/main/java/}"
+            PACKAGE_DIR=$(dirname "$RELATIVE_PATH")
+
+            TEST_DIR="src/test/java/$PACKAGE_DIR"
+            TEST_FILE="$TEST_DIR/${TEST_CLASS}.java"
+
+            mkdir -p "$TEST_DIR"
+
+            SAFE_NAME=$(echo "$FILE" | tr '/.' '__')
+
+            DIFF_FILE=".copilot-context/${SAFE_NAME}.diff"
+            METHODS_FILE=".copilot-context/${SAFE_NAME}.methods.txt"
+
+            # ------------------------------------------------------
+            # Save exact diff
+            # ------------------------------------------------------
+            if [ -n "$BASE_SHA" ]; then
+              git diff \
+                --unified=3 \
+                "$BASE_SHA" \
+                "$HEAD_SHA" \
+                -- "$FILE" > "$DIFF_FILE" || true
+            else
+              {
+                echo "FIRST RUN"
+                echo "Entire source file should be treated as new."
+                echo ""
+                cat "$FILE"
+              } > "$DIFF_FILE"
+            fi
+
+            # ------------------------------------------------------
+            # Detect changed methods
+            # ------------------------------------------------------
+            python3 .ci-tools/detect_changed_methods.py \
+              "$BASE_SHA" \
+              "$HEAD_SHA" \
+              "$FILE" > "$METHODS_FILE"
+
+            CHANGED_METHODS=$(cat "$METHODS_FILE" || true)
+
+            echo ""
+            echo "Changed methods:"
+            echo "${CHANGED_METHODS:-<none detected>}"
+
+            # ------------------------------------------------------
+            # If Java file changed but no method detected:
+            #
+            # Could be:
+            #   - field change
+            #   - constructor change
+            #   - annotation change
+            #   - class-level change
+            #
+            # We still ask Copilot to inspect exact diff.
+            # ------------------------------------------------------
+            if [ -z "$CHANGED_METHODS" ]; then
+              CHANGE_SCOPE="No exact method was detected. The change may be class-level, field-level, constructor-level, annotation-level, or parser edge case. Use the exact Git diff as the scope."
+            else
+              CHANGE_SCOPE="Only these production methods were detected as affected:
+
+          $CHANGED_METHODS"
+            fi
+
+            # ------------------------------------------------------
+            # Existing test
+            # ------------------------------------------------------
+            if [ -f "$TEST_FILE" ]; then
+
+              echo "[EXISTING TEST]"
+              echo "$TEST_FILE"
+
+              copilot -p "
+          You are maintaining unit tests in a Java 17 Spring Boot Maven project.
+
+          PROJECT:
+          - Group: com.volane
+          - Name: employee-crud
+          - Java: 17
+          - Maven
+          - JUnit 5
+          - Mockito where appropriate
+
+          CURRENT PRODUCTION SOURCE:
+          $FILE
+
+          EXISTING TEST FILE:
+          $TEST_FILE
+
+          EXACT GIT DIFF:
+          $DIFF_FILE
+
+          DETECTED CHANGED METHODS FILE:
+          $METHODS_FILE
+
+          CHANGE SCOPE:
+          $CHANGE_SCOPE
+
+          TASK:
+          Read the production source, existing test file, exact Git diff,
+          and detected changed-method list from disk.
+
+          Update $TEST_FILE directly on disk.
+
+          PRIMARY GOAL:
+          Generate or update unit tests only for behavior affected by
+          the production-code change.
+
+          STRICT RULES:
+          1. Preserve unrelated existing test methods.
+          2. Do not regenerate the entire test class from scratch.
+          3. Do not delete unrelated manual tests.
+          4. Do not rename unrelated tests.
+          5. Do not rewrite unrelated assertions.
+          6. Do not reformat the entire file.
+          7. Keep existing setup and mocks when valid.
+          8. Update an existing test only when changed production behavior makes it outdated.
+          9. Add tests for new branches introduced by changed methods.
+          10. Add tests for changed null handling.
+          11. Add tests for changed invalid-input behavior.
+          12. Add tests for changed not-found behavior.
+          13. Add tests for changed exception behavior.
+          14. Add tests for changed repository or dependency interactions.
+          15. If a changed private method affects a public method, test through the public method.
+          16. Never test private methods directly.
+          17. Use JUnit 5.
+          18. Use Mockito where appropriate.
+          19. Keep tests deterministic.
+          20. Keep tests compilable.
+          21. Tag basic CRUD create/read happy-path tests with @Tag(\"smoke\") where applicable.
+          22. Write changes directly to $TEST_FILE.
+          23. Do not merely print code.
+          24. Do not modify production code.
+          25. Do not modify unrelated test files.
+          26. Do not run git commit.
+          27. Do not run git push.
+
+          IMPORTANT:
+          The detected changed methods and exact Git diff define the test-maintenance scope.
+          " \
+                --allow-all-tools \
+                --allow-all-paths
+
+            # ------------------------------------------------------
+            # New test class
+            # ------------------------------------------------------
+            else
+
+              echo "[NEW TEST CLASS]"
+              echo "$TEST_FILE"
+
+              copilot -p "
+          You are generating unit tests in a Java 17 Spring Boot Maven project.
+
+          PROJECT:
+          - Group: com.volane
+          - Name: employee-crud
+          - Java: 17
+          - Maven
+          - JUnit 5
+          - Mockito where appropriate
+
+          PRODUCTION SOURCE:
+          $FILE
+
+          TARGET TEST FILE:
+          $TEST_FILE
+
+          EXACT GIT DIFF:
+          $DIFF_FILE
+
+          DETECTED CHANGED METHODS:
+          $METHODS_FILE
+
+          CHANGE SCOPE:
+          $CHANGE_SCOPE
+
+          TASK:
+          Read the source file, exact Git diff, and changed-method list.
+
+          Create $TEST_FILE directly on disk.
+
+          REQUIREMENTS:
+          1. Mirror the source package.
+          2. Name the class $TEST_CLASS.
+          3. Prioritize tests for detected changed methods.
+          4. Cover happy path for affected public behavior.
+          5. Cover null input where applicable.
+          6. Cover invalid input where applicable.
+          7. Cover not-found behavior where applicable.
+          8. Cover changed exception paths.
+          9. Cover important changed branches.
+          10. Use Mockito where dependencies need mocking.
+          11. Do not test private methods directly.
+          12. Tag basic CRUD create/read happy-path tests with @Tag(\"smoke\") where applicable.
+          13. Keep tests focused.
+          14. Keep tests deterministic.
+          15. Keep tests compilable.
+          16. Write the file directly to disk.
+          17. Do not merely print code.
+          18. Do not modify production code.
+          19. Do not modify unrelated files.
+          20. Do not run git commit.
+          21. Do not run git push.
+          " \
+                --allow-all-tools \
+                --allow-all-paths
+
+            fi
+
+            # ------------------------------------------------------
+            # Verify expected test file
+            # ------------------------------------------------------
+            if [ ! -f "$TEST_FILE" ]; then
+              echo "ERROR: Expected test file was not created:"
+              echo "$TEST_FILE"
+              exit 1
+            fi
+
+            # ------------------------------------------------------
+            # Build affected test class list
+            # ------------------------------------------------------
+            if [ -z "$TEST_CLASSES" ]; then
+              TEST_CLASSES="$TEST_CLASS"
+            else
+              TEST_CLASSES="${TEST_CLASSES},${TEST_CLASS}"
+            fi
+
+          done <<< "$CHANGED_FILES"
+
+          # --------------------------------------------------------
+          # Deduplicate
+          # --------------------------------------------------------
+          TEST_CLASSES=$(echo "$TEST_CLASSES" \
+            | tr ',' '\n' \
+            | sed '/^[[:space:]]*$/d' \
+            | sort -u \
+            | paste -sd ',' -)
+
+          echo ""
+          echo "Affected test classes:"
+          echo "$TEST_CLASSES"
+
+          echo "test_classes=$TEST_CLASSES" >> "$GITHUB_OUTPUT"
+
+      # ============================================================
+      # 8. SHOW EXACT TEST DIFF
+      # ============================================================
+      - name: Show Copilot test changes
+        if: steps.detect.outputs.any_changes == 'true'
+        shell: bash
+        run: |
+          echo "================================================"
+          echo "GIT STATUS"
+          echo "================================================"
+          git status --short
+
+          echo ""
+          echo "================================================"
+          echo "TEST CHANGES"
+          echo "================================================"
+          git diff -- src/test/java || true
+
+      # ============================================================
+      # 9. COMPILE GENERATED TESTS
+      #
+      # test-compile:
+      #   - compiles production code
+      #   - compiles test code
+      #   - does not execute tests
+      # ============================================================
+      - name: Compile generated tests
+        if: steps.detect.outputs.any_changes == 'true'
+        id: compile_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+
+          mvn -B \
+            -DskipTests \
+            test-compile \
+            2>&1 | tee .copilot-test-compile.log
+
+      # ============================================================
+      # 10. ONE AI REPAIR ATTEMPT
+      #
+      # Only runs if generated tests fail compilation.
+      # This consumes another Copilot request, so only one retry.
+      # ============================================================
+      - name: Repair generated tests after compilation failure
+        if: >
+          steps.detect.outputs.any_changes == 'true' &&
+          steps.compile_tests.outcome == 'failure'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          echo "Generated tests failed compilation."
+          echo "Running one Copilot repair attempt."
+
+          copilot -p "
+          The generated or updated JUnit 5 tests in src/test/java
+          failed Maven test compilation.
+
+          COMPILATION LOG:
+          .copilot-test-compile.log
+
+          TASK:
+          1. Read .copilot-test-compile.log.
+          2. Inspect only the test files currently changed in git.
+          3. Fix compilation errors in those changed test files.
+          4. Preserve the intended test behavior.
+          5. Do not remove meaningful assertions just to make compilation pass.
+          6. Do not modify production source code.
+          7. Do not modify unrelated tests.
+          8. Use JUnit 5.
+          9. Use Mockito APIs compatible with the project dependencies.
+          10. Write fixes directly to disk.
+          11. Do not merely print code.
+          12. Do not run git commit.
+          13. Do not run git push.
+          " \
+            --allow-all-tools \
+            --allow-all-paths
+
+      # ============================================================
+      # 11. FINAL COMPILE CHECK
+      # Pipeline fails here if repair did not work
+      # ============================================================
+      - name: Final test compilation check
+        if: steps.detect.outputs.any_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mvn -B \
+            -DskipTests \
+            test-compile
+
+      # ============================================================
+      # 12. COMMIT GENERATED/UPDATED TESTS
+      # ============================================================
+      - name: Commit generated or updated tests
+        if: steps.detect.outputs.any_changes == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "copilot-bot"
+          git config user.email "copilot-bot@users.noreply.github.com"
+
+          # Stage only tests
+          git add src/test/java
+
+          if git diff --cached --quiet; then
+            echo "No test changes to commit."
+            exit 0
+          fi
+
+          echo "================================================"
+          echo "STAGED TEST DIFF"
+          echo "================================================"
+          git diff --cached -- src/test/java
+
+          git commit \
+            -m "chore: update unit tests for changed methods [skip ci]"
+
+          git pull \
+            --rebase \
+            origin \
+            "${{ github.ref_name }}"
+
+          git push \
+            origin \
+            "HEAD:${{ github.ref_name }}"
+
+
+  # ==============================================================
+  # JOB 2
+  # RUN ONLY AFFECTED UNIT TEST CLASSES
+  # ==============================================================
+  run-affected-tests:
+    needs: copilot-generate-tests
+
+    if: >
+      needs.copilot-generate-tests.outputs.any_changes == 'true' &&
+      needs.copilot-generate-tests.outputs.test_classes != ''
+
+    runs-on: ubuntu-latest
+
+    steps:
+      # ============================================================
+      # Checkout latest branch including generated test commit
+      # ============================================================
+      - name: Checkout latest branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      # ============================================================
+      # Setup Java 17
+      # ============================================================
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # ============================================================
+      # Run only affected unit test classes
+      # ============================================================
+      - name: Run affected unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TEST_CLASSES="${{ needs.copilot-generate-tests.outputs.test_classes }}"
+
+          echo "================================================"
+          echo "RUNNING AFFECTED UNIT TESTS"
+          echo "================================================"
+          echo "$TEST_CLASSES"
+
+          mvn -B test \
+            -Dtest="$TEST_CLASSES"
+
+      # ============================================================
+      # Upload Allure raw results
+      # ============================================================
+      - name: Upload raw Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ github.run_number }}
+          path: target/allure-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      # ============================================================
+      # Upload Surefire reports
+      # ============================================================
+      - name: Upload Surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: affected-unit-test-report-${{ github.run_number }}
+          path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+
+  # ==============================================================
+  # JOB 3
+  # NO SOURCE CHANGES
+  # ==============================================================
+  skip-notice:
+    needs: copilot-generate-tests
+
+    if: needs.copilot-generate-tests.outputs.any_changes != 'true'
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: No Java source changes detected
+        run: |
+          echo "================================================"
+          echo "NO PRODUCTION JAVA CHANGES"
+          echo "================================================"
+          echo "Copilot generation skipped."
+          echo "Unit test execution skipped."
+          echo "No Copilot request used."
