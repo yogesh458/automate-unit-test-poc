@@ -155,19 +155,6 @@
 					</systemPropertyVariables>
 				</configuration>
 			</plugin>
-
-			<!-- Converts target/allure-results into an HTML report at
-                 target/site/allure-maven-plugin/index.html
-                 Run with: mvn io.qameta.allure:allure-maven:report -->
-			<plugin>
-				<groupId>io.qameta.allure</groupId>
-				<artifactId>allure-maven</artifactId>
-				<version>2.14.0</version>
-				<configuration>
-					<reportVersion>2.29.1</reportVersion>
-				</configuration>
-			</plugin>
-
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>

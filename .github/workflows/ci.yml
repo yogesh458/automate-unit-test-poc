@@ -11,7 +11,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  copilot-requests: write
 
 jobs:
   copilot-generate-test:
@@ -43,7 +42,7 @@ jobs:
 
       - name: Generate/update test with Copilot CLI
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
         run: |
           copilot -p "This is a Spring Boot project (group com.volane, project employee-crud). Look at ${{ steps.locate.outputs.file }}. Generate or update its JUnit 5 test class under src/test/java, mirroring the same package path, named EmployeeServiceImplTest. Cover: happy path for each public method, null/invalid input, and not-found case. Tag basic CRUD create/read tests with @Tag(\"smoke\"). Write the file directly to disk, do not just print code." \
             --allow-all-tools --allow-all-paths
@@ -79,16 +78,12 @@ jobs:
       - name: Run smoke-tagged tests
         run: mvn test -Psmoke
 
-      - name: Generate Allure HTML report
-        if: always()
-        run: mvn io.qameta.allure:allure-maven:report
-
-      - name: Upload Allure report
+      - name: Upload raw Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: allure-report
-          path: target/site/allure-maven-plugin/
+          name: allure-results
+          path: target/allure-results/
 
       - name: Upload Surefire report
         if: always()
