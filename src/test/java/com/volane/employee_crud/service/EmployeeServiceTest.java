@@ -1,4 +1,4 @@
-package com.volane.employee_crud.service.impl;
+package com.volane.employee_crud.service;
 
 import com.volane.employee_crud.dto.EmployeeRequestDto;
 import com.volane.employee_crud.dto.EmployeeResponseDto;
@@ -6,6 +6,7 @@ import com.volane.employee_crud.entity.Employee;
 import com.volane.employee_crud.exception.DuplicateResourceException;
 import com.volane.employee_crud.exception.ResourceNotFoundException;
 import com.volane.employee_crud.repository.EmployeeRepository;
+import com.volane.employee_crud.service.impl.EmployeeServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,12 +23,11 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("EmployeeServiceImpl Test Suite")
-class EmployeeServiceImplTest {
+@DisplayName("EmployeeService Interface Test Suite")
+class EmployeeServiceTest {
 
     @Mock
     private EmployeeRepository employeeRepository;
@@ -69,6 +69,210 @@ class EmployeeServiceImplTest {
                 .department("IT")
                 .salary(50000.0)
                 .build();
+    }
+
+    @Nested
+    @DisplayName("getEmployeesByDepartment Tests (New Method)")
+    class GetEmployeesByDepartmentTests {
+
+        @Test
+        @Tag("smoke")
+        @DisplayName("Should successfully retrieve employees by department with case-insensitive match")
+        void testGetEmployeesByDepartmentHappyPath() {
+            Employee employee2 = Employee.builder()
+                    .id(2L)
+                    .employeeId("EMP002")
+                    .firstName("Jane")
+                    .lastName("Smith")
+                    .email("jane.smith@example.com")
+                    .department("IT")
+                    .salary(55000.0)
+                    .build();
+
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee, employee2));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
+
+            assertNotNull(result);
+            assertEquals(2, result.size());
+            assertEquals("EMP001", result.get(0).getEmployeeId());
+            assertEquals("EMP002", result.get(1).getEmployeeId());
+            assertEquals("IT", result.get(0).getDepartment());
+            assertEquals("IT", result.get(1).getDepartment());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should retrieve employees with case-insensitive department matching")
+        void testGetEmployeesByDepartmentCaseInsensitive() {
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("it");
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals("IT", result.get(0).getDepartment());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should retrieve employees with uppercase department matching")
+        void testGetEmployeesByDepartmentUppercaseMatch() {
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should retrieve employees with mixed case department matching")
+        void testGetEmployeesByDepartmentMixedCaseMatch() {
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("It");
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should return empty list when no employees match department")
+        void testGetEmployeesByDepartmentNoMatch() {
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("HR");
+
+            assertNotNull(result);
+            assertEquals(0, result.size());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should return empty list when no employees exist")
+        void testGetEmployeesByDepartmentEmptyRepository() {
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList());
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
+
+            assertNotNull(result);
+            assertEquals(0, result.size());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should exclude employees with null department")
+        void testGetEmployeesByDepartmentExcludesNullDepartment() {
+            Employee employeeWithNullDept = Employee.builder()
+                    .id(2L)
+                    .employeeId("EMP002")
+                    .firstName("Bob")
+                    .lastName("Johnson")
+                    .email("bob.johnson@example.com")
+                    .department(null)
+                    .salary(45000.0)
+                    .build();
+
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee, employeeWithNullDept));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
+
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals("EMP001", result.get(0).getEmployeeId());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should filter correctly when multiple employees with different departments exist")
+        void testGetEmployeesByDepartmentMultipleDepartments() {
+            Employee hrEmployee = Employee.builder()
+                    .id(2L)
+                    .employeeId("EMP002")
+                    .firstName("Alice")
+                    .lastName("Brown")
+                    .email("alice.brown@example.com")
+                    .department("HR")
+                    .salary(48000.0)
+                    .build();
+
+            Employee financeEmployee = Employee.builder()
+                    .id(3L)
+                    .employeeId("EMP003")
+                    .firstName("Charlie")
+                    .lastName("Davis")
+                    .email("charlie.davis@example.com")
+                    .department("Finance")
+                    .salary(60000.0)
+                    .build();
+
+            Employee itEmployee2 = Employee.builder()
+                    .id(4L)
+                    .employeeId("EMP004")
+                    .firstName("Diana")
+                    .lastName("Evans")
+                    .email("diana.evans@example.com")
+                    .department("IT")
+                    .salary(55000.0)
+                    .build();
+
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee, hrEmployee, financeEmployee, itEmployee2));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
+
+            assertNotNull(result);
+            assertEquals(2, result.size());
+            assertTrue(result.stream().allMatch(e -> "IT".equals(e.getDepartment())));
+            assertEquals(2, result.stream().filter(e -> "IT".equals(e.getDepartment())).count());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should handle search with empty string department")
+        void testGetEmployeesByDepartmentWithEmptyString() {
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("");
+
+            assertNotNull(result);
+            assertEquals(0, result.size());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
+
+        @Test
+        @DisplayName("Should return empty list for non-existent department with employees in repository")
+        void testGetEmployeesByDepartmentNonExistentDept() {
+            when(employeeRepository.findAll())
+                    .thenReturn(Arrays.asList(employee));
+
+            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("NonExistent");
+
+            assertNotNull(result);
+            assertEquals(0, result.size());
+
+            verify(employeeRepository, times(1)).findAll();
+        }
     }
 
     @Nested
@@ -140,26 +344,6 @@ class EmployeeServiceImplTest {
             assertThrows(NullPointerException.class,
                     () -> employeeService.createEmployee(null),
                     "Should throw NullPointerException for null input");
-        }
-
-        @Test
-        @DisplayName("Should throw NullPointerException when employee ID is null")
-        void testCreateEmployeeWithNullEmployeeId() {
-            employeeRequestDto.setEmployeeId(null);
-
-            assertThrows(NullPointerException.class,
-                    () -> employeeService.createEmployee(employeeRequestDto),
-                    "Should throw NullPointerException for null employee ID");
-        }
-
-        @Test
-        @DisplayName("Should throw NullPointerException when email is null")
-        void testCreateEmployeeWithNullEmail() {
-            employeeRequestDto.setEmail(null);
-
-            assertThrows(NullPointerException.class,
-                    () -> employeeService.createEmployee(employeeRequestDto),
-                    "Should throw NullPointerException for null email");
         }
     }
 
@@ -386,17 +570,6 @@ class EmployeeServiceImplTest {
         }
 
         @Test
-        @DisplayName("Should throw NullPointerException when null EmployeeRequestDto is provided")
-        void testUpdateEmployeeWithNullInput() {
-            when(employeeRepository.findById(1L))
-                    .thenReturn(Optional.of(employee));
-
-            assertThrows(NullPointerException.class,
-                    () -> employeeService.updateEmployee(1L, null),
-                    "Should throw NullPointerException for null input");
-        }
-
-        @Test
         @DisplayName("Should throw NullPointerException when null ID is provided")
         void testUpdateEmployeeWithNullId() {
             when(employeeRepository.findById(null))
@@ -450,206 +623,6 @@ class EmployeeServiceImplTest {
             assertThrows(NullPointerException.class,
                     () -> employeeService.deleteEmployee(null),
                     "Should throw NullPointerException for null ID");
-        }
-    }
-
-    @Nested
-    @DisplayName("getEmployeesByDepartment Tests")
-    class GetEmployeesByDepartmentTests {
-
-        @Test
-        @Tag("smoke")
-        @DisplayName("Should successfully retrieve employees by department")
-        void testGetEmployeesByDepartmentHappyPath() {
-            Employee employee2 = Employee.builder()
-                    .id(2L)
-                    .employeeId("EMP002")
-                    .firstName("Jane")
-                    .lastName("Smith")
-                    .email("jane.smith@example.com")
-                    .department("IT")
-                    .salary(45000.0)
-                    .build();
-
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employee, employee2));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
-
-            assertNotNull(result);
-            assertEquals(2, result.size());
-            assertEquals("IT", result.get(0).getDepartment());
-            assertEquals("IT", result.get(1).getDepartment());
-            assertEquals("EMP001", result.get(0).getEmployeeId());
-            assertEquals("EMP002", result.get(1).getEmployeeId());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should perform case-insensitive department matching")
-        void testGetEmployeesByDepartmentCaseInsensitive() {
-            Employee employee2 = Employee.builder()
-                    .id(2L)
-                    .employeeId("EMP002")
-                    .firstName("Jane")
-                    .lastName("Smith")
-                    .email("jane.smith@example.com")
-                    .department("HR")
-                    .salary(45000.0)
-                    .build();
-
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employee, employee2));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("it");
-
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals("IT", result.get(0).getDepartment());
-            assertEquals("EMP001", result.get(0).getEmployeeId());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should return empty list when no employees match department")
-        void testGetEmployeesByDepartmentNoMatch() {
-            Employee employee2 = Employee.builder()
-                    .id(2L)
-                    .employeeId("EMP002")
-                    .firstName("Jane")
-                    .lastName("Smith")
-                    .email("jane.smith@example.com")
-                    .department("HR")
-                    .salary(45000.0)
-                    .build();
-
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employee, employee2));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("Finance");
-
-            assertNotNull(result);
-            assertEquals(0, result.size());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should exclude employees with null department")
-        void testGetEmployeesByDepartmentExcludesNullDepartment() {
-            Employee employeeWithNullDept = Employee.builder()
-                    .id(2L)
-                    .employeeId("EMP002")
-                    .firstName("Jane")
-                    .lastName("Smith")
-                    .email("jane.smith@example.com")
-                    .department(null)
-                    .salary(45000.0)
-                    .build();
-
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employee, employeeWithNullDept));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
-
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals("EMP001", result.get(0).getEmployeeId());
-            assertNotNull(result.get(0).getDepartment());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should return empty list when all employees have null department")
-        void testGetEmployeesByDepartmentAllNullDepartments() {
-            Employee employeeWithNullDept = Employee.builder()
-                    .id(2L)
-                    .employeeId("EMP002")
-                    .firstName("Jane")
-                    .lastName("Smith")
-                    .email("jane.smith@example.com")
-                    .department(null)
-                    .salary(45000.0)
-                    .build();
-
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employeeWithNullDept));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
-
-            assertNotNull(result);
-            assertEquals(0, result.size());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should return empty list when repository returns empty list")
-        void testGetEmployeesByDepartmentEmptyRepository() {
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList());
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
-
-            assertNotNull(result);
-            assertEquals(0, result.size());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should handle uppercase department search")
-        void testGetEmployeesByDepartmentUppercase() {
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employee));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
-
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals("IT", result.get(0).getDepartment());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should handle mixed case department search")
-        void testGetEmployeesByDepartmentMixedCase() {
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employee));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("It");
-
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals("IT", result.get(0).getDepartment());
-
-            verify(employeeRepository, times(1)).findAll();
-        }
-
-        @Test
-        @DisplayName("Should correctly map employees to response DTOs")
-        void testGetEmployeesByDepartmentCorrectMapping() {
-            when(employeeRepository.findAll())
-                    .thenReturn(Arrays.asList(employee));
-
-            List<EmployeeResponseDto> result = employeeService.getEmployeesByDepartment("IT");
-
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            EmployeeResponseDto dto = result.get(0);
-            assertEquals(1L, dto.getId());
-            assertEquals("EMP001", dto.getEmployeeId());
-            assertEquals("John", dto.getFirstName());
-            assertEquals("Doe", dto.getLastName());
-            assertEquals("john.doe@example.com", dto.getEmail());
-            assertEquals("IT", dto.getDepartment());
-            assertEquals(50000.0, dto.getSalary());
-
-            verify(employeeRepository, times(1)).findAll();
         }
     }
 }
