@@ -1,0 +1,168 @@
+name: Copilot Auto Test - Frontend (Vue)
+
+on:
+  push:
+    branches-ignore:
+      - main
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+  copilot-requests: write
+
+jobs:
+  copilot-generate-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      any_changes: ${{ steps.diff.outputs.any_changes }}
+      changed_specs: ${{ steps.generate.outputs.changed_specs }}
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install project dependencies
+        run: npm ci
+
+      - name: Install/Update GitHub Copilot CLI
+        run: npm install -g @github/copilot && copilot update || true
+
+      - name: Detect changed Vue component files in this push
+        id: diff
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -z "$BEFORE" ] || [ "$BEFORE" == "0000000000000000000000000000000000000000" ]; then
+            BEFORE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+          fi
+
+          if [ -z "$BEFORE" ]; then
+            echo "=================================================="
+            echo "No previous commit found - first run on this branch."
+            echo "Treating ALL existing .vue components as new for scanning."
+            echo "=================================================="
+            CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
+          else
+            CHANGED=$(git diff --name-only "$BEFORE" HEAD -- '*.vue' | grep -E 'src/(components|views)' || true)
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "=================================================="
+            echo "NO COMPONENT CHANGES DETECTED since the last commit."
+            echo "Skipping test generation - existing tests remain as-is."
+            echo "=================================================="
+            echo "any_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "any_changes=true" >> $GITHUB_OUTPUT
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          echo "=================================================="
+          echo "CHANGES DETECTED. Classifying each component:"
+          echo "=================================================="
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+            COMPONENT_NAME=$(basename "$FILE" .vue)
+            TEST_FILE=$(dirname "$FILE")/__tests__/${COMPONENT_NAME}.spec.js
+            if [ -f "$TEST_FILE" ]; then
+              echo "  [MODIFIED COMPONENT] $FILE"
+              echo "    -> Existing spec found at $TEST_FILE - will be UPDATED."
+            else
+              echo "  [NEW COMPONENT] $FILE"
+              echo "    -> No existing spec - will be CREATED for the first time."
+            fi
+          done <<< "$CHANGED"
+          echo "=================================================="
+
+      - name: Generate/update Vue unit tests with Copilot CLI
+        if: steps.diff.outputs.any_changes == 'true'
+        id: generate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          SPECS=""
+          while IFS= read -r FILE; do
+            [ -z "$FILE" ] && continue
+            COMPONENT_NAME=$(basename "$FILE" .vue)
+            TEST_FILE="$(dirname "$FILE")/__tests__/${COMPONENT_NAME}.spec.js"
+
+            if [ -f "$TEST_FILE" ]; then
+              echo ">>> Regenerating UPDATED spec for changed component: $FILE"
+            else
+              echo ">>> Generating NEW spec for new component: $FILE"
+            fi
+
+            copilot -p "This is a Vue 3 project using Vitest and @vue/test-utils. Look at $FILE. Generate or update a comprehensive unit test spec at $(dirname "$FILE")/__tests__/${COMPONENT_NAME}.spec.js using Vitest (describe/it/expect) and @vue/test-utils mount(). Cover ALL of the following scenarios where applicable to this component: (1) component renders with all expected form fields and elements present, (2) required field validation - submitting with empty fields shows correct validation errors, (3) email field validation - rejects invalid email formats, accepts valid ones, (4) password field validation - enforces minimum length/complexity rules if present in the component, (5) for registration: confirm-password field matches the password field, mismatch shows an error, (6) whitespace-only input in text fields is treated as invalid/trimmed, (7) submit button is disabled or submission is blocked while the form is invalid, (8) successful form submission calls the correct API/store method with the exact expected payload shape, (9) on successful API response, the component emits the correct event or redirects/navigates as expected, (10) on failed API response (e.g. wrong credentials, duplicate email), the correct error message is displayed to the user, (11) a loading/disabled state is shown while the submission request is in flight, (12) toggling any password-visibility or remember-me style UI controls works correctly if present. Mock all API/store calls with vi.fn() - do not make real network calls. Write the file directly to disk, do not just print code." \
+              --allow-all-tools --allow-all-paths
+
+            echo ">>> Done: ${COMPONENT_NAME}.spec.js"
+            SPECS="${SPECS}${TEST_FILE},"
+          done <<< "${{ steps.diff.outputs.changed_files }}"
+
+          SPECS="${SPECS%,}"
+          echo "=================================================="
+          echo "SUMMARY - Specs generated/updated this run:"
+          echo "$SPECS" | tr ',' '\n'
+          echo "=================================================="
+          echo "changed_specs=$SPECS" >> $GITHUB_OUTPUT
+
+      - name: Commit generated/updated specs
+        if: steps.diff.outputs.any_changes == 'true'
+        run: |
+          git config user.name "copilot-bot"
+          git config user.email "copilot-bot@users.noreply.github.com"
+          git add '**/__tests__/*.spec.js'
+          if git diff --cached --quiet; then
+            echo "No spec changes to commit."
+          else
+            git commit -m "chore: Copilot-generated/updated Vue unit tests [skip ci]"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+  run-affected-tests:
+    needs: copilot-generate-tests
+    if: needs.copilot-generate-tests.outputs.any_changes == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout latest (including Copilot-generated specs)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run only the affected specs
+        run: |
+          echo "Running specs: ${{ needs.copilot-generate-tests.outputs.changed_specs }}"
+          npx vitest run ${{ needs.copilot-generate-tests.outputs.changed_specs }} --reporter=default --reporter=html
+
+      - name: Upload HTML test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-html-report
+          path: html-report/
+
+  skip-notice:
+    needs: copilot-generate-tests
+    if: needs.copilot-generate-tests.outputs.any_changes != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: No changes detected
+        run: echo "No .vue component changes in this push - skipping test generation and execution."
