@@ -42,27 +42,30 @@ jobs:
       - name: Detect changed Vue component files in this push
         id: diff
         run: |
+          MARKER_FILE=".github/copilot-last-scan.txt"
+
           if [ "${{ github.event.inputs.full_scan }}" == "true" ]; then
             echo "=================================================="
             echo "MANUAL FULL SCAN requested - scanning ALL .vue components."
             echo "=================================================="
             CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
+
+          elif [ ! -f "$MARKER_FILE" ]; then
+            echo "=================================================="
+            echo "No scan marker found - this is the FIRST PIPELINE RUN on this branch."
+            echo "Scanning ALL existing .vue components as a baseline."
+            echo "=================================================="
+            CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
+
           else
-            BEFORE="${{ github.event.before }}"
-            if [ -z "$BEFORE" ] || [ "$BEFORE" == "0000000000000000000000000000000000000000" ]; then
-              BEFORE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
-            fi
+            LAST_SCANNED=$(cat "$MARKER_FILE")
+            echo "DEBUG: Last scanned commit = $LAST_SCANNED  Current HEAD = $(git rev-parse HEAD)"
 
-            echo "DEBUG: BEFORE=$BEFORE  HEAD=$(git rev-parse HEAD)"
-
-            if [ -z "$BEFORE" ]; then
-              echo "=================================================="
-              echo "No previous commit found - first run on this branch."
-              echo "Treating ALL existing .vue components as new for scanning."
-              echo "=================================================="
+            if ! git cat-file -e "$LAST_SCANNED" 2>/dev/null; then
+              echo "Marker commit no longer exists in history (e.g. rebase/squash) - falling back to full scan."
               CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
             else
-              CHANGED=$(git diff --name-only "$BEFORE" HEAD -- '*.vue' | grep -E 'src/(components|views)' || true)
+              CHANGED=$(git diff --name-only "$LAST_SCANNED" HEAD -- '*.vue' | grep -E 'src/(components|views)' || true)
             fi
           fi
 
@@ -129,16 +132,20 @@ jobs:
           echo "=================================================="
           echo "changed_specs=$SPECS" >> $GITHUB_OUTPUT
 
-      - name: Commit generated/updated specs
+      - name: Commit generated/updated specs and update scan marker
         if: steps.diff.outputs.any_changes == 'true'
         run: |
           git config user.name "copilot-bot"
           git config user.email "copilot-bot@users.noreply.github.com"
-          git add '**/__tests__/*.spec.js'
+
+          mkdir -p .github
+          git rev-parse HEAD > .github/copilot-last-scan.txt
+
+          git add '**/__tests__/*.spec.js' '**/__tests__/*.spec.ts' .github/copilot-last-scan.txt
           if git diff --cached --quiet; then
             echo "No spec changes to commit."
           else
-            git commit -m "chore: Copilot-generated/updated Vue unit tests [skip ci]"
+            git commit -m "chore: Copilot-generated/updated Vue unit tests + update scan marker [skip ci]"
             git pull --rebase origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi
