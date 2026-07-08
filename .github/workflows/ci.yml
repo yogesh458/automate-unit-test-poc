@@ -1,4 +1,4 @@
-name: Copilot Auto Test - Frontend (Vue)
+name: Copilot Auto Test - Frontend (Vue) - RegisterView scope
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       full_scan:
-        description: 'Force scan ALL .vue components regardless of what changed (use to test/debug)'
+        description: 'Force regenerate the RegisterView test regardless of whether it changed'
         required: false
         default: 'false'
 
@@ -21,7 +21,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       any_changes: ${{ steps.diff.outputs.any_changes }}
-      changed_specs: ${{ steps.generate.outputs.changed_specs }}
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
@@ -39,123 +38,107 @@ jobs:
       - name: Install/Update GitHub Copilot CLI
         run: npm install -g @github/copilot && copilot update || true
 
-      - name: Detect changed Vue component files in this push
+      - name: Locate RegisterView.vue and related context files
+        id: locate
+        run: |
+          FILE=$(find src -name "RegisterView.vue" | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "RegisterView.vue not found under src/ - check the path/filename."
+            exit 1
+          fi
+          echo "file=$FILE" >> $GITHUB_OUTPUT
+
+          STORE=$(find src -name "auth.ts" | head -n 1)
+          AXIOS=$(find src -name "axios.ts" | head -n 1)
+          echo "store=$STORE" >> $GITHUB_OUTPUT
+          echo "axios=$AXIOS" >> $GITHUB_OUTPUT
+
+      - name: Detect whether RegisterView.vue changed since last scan
         id: diff
         run: |
-          MARKER_FILE=".github/copilot-last-scan.txt"
+          MARKER_FILE=".github/copilot-last-scan-register.txt"
+          FILE="${{ steps.locate.outputs.file }}"
+          TEST_FILE="src/views/__tests__/RegisterView.spec.ts"
 
           if [ "${{ github.event.inputs.full_scan }}" == "true" ]; then
             echo "=================================================="
-            echo "MANUAL FULL SCAN requested - scanning ALL .vue components."
+            echo "MANUAL FULL SCAN requested - regenerating RegisterView test regardless of changes."
             echo "=================================================="
-            CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
+            echo "any_changes=true" >> $GITHUB_OUTPUT
 
           elif [ ! -f "$MARKER_FILE" ]; then
             echo "=================================================="
-            echo "No scan marker found - this is the FIRST PIPELINE RUN on this branch."
-            echo "Scanning ALL existing .vue components as a baseline."
+            echo "No scan marker found - this is the FIRST PIPELINE RUN for RegisterView."
+            echo "[NEW COMPONENT] $FILE"
+            if [ -f "$TEST_FILE" ]; then
+              echo "  -> Existing test file found at $TEST_FILE - will be treated as baseline and UPDATED."
+            else
+              echo "  -> No existing test - will be CREATED for the first time."
+            fi
             echo "=================================================="
-            CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
+            echo "any_changes=true" >> $GITHUB_OUTPUT
 
           else
             LAST_SCANNED=$(cat "$MARKER_FILE")
             echo "DEBUG: Last scanned commit = $LAST_SCANNED  Current HEAD = $(git rev-parse HEAD)"
 
             if ! git cat-file -e "$LAST_SCANNED" 2>/dev/null; then
-              echo "Marker commit no longer exists in history (e.g. rebase/squash) - falling back to full scan."
-              CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
+              echo "Marker commit no longer exists in history - falling back to regenerate."
+              echo "any_changes=true" >> $GITHUB_OUTPUT
             else
-              CHANGED=$(git diff --name-only "$LAST_SCANNED" HEAD -- '*.vue' | grep -E 'src/(components|views)' || true)
+              CHANGED=$(git diff --name-only "$LAST_SCANNED" HEAD -- "$FILE" || true)
+              if [ -z "$CHANGED" ]; then
+                echo "=================================================="
+                echo "NO CHANGES DETECTED in RegisterView.vue since the last scan."
+                echo "Skipping test generation - existing test remains as-is."
+                echo "=================================================="
+                echo "any_changes=false" >> $GITHUB_OUTPUT
+              else
+                echo "=================================================="
+                echo "[MODIFIED COMPONENT] $FILE"
+                echo "  -> Changed since last scan - existing test will be UPDATED."
+                echo "=================================================="
+                echo "any_changes=true" >> $GITHUB_OUTPUT
+              fi
             fi
           fi
 
-          if [ -z "$CHANGED" ]; then
-            echo "=================================================="
-            echo "NO COMPONENT CHANGES DETECTED since the last commit."
-            echo "Skipping test generation - existing tests remain as-is."
-            echo "=================================================="
-            echo "any_changes=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "any_changes=true" >> $GITHUB_OUTPUT
-          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          echo "=================================================="
-          echo "CHANGES DETECTED. Classifying each component:"
-          echo "=================================================="
-          while IFS= read -r FILE; do
-            [ -z "$FILE" ] && continue
-            COMPONENT_NAME=$(basename "$FILE" .vue)
-            TEST_FILE=$(dirname "$FILE")/__tests__/${COMPONENT_NAME}.spec.js
-            if [ -f "$TEST_FILE" ]; then
-              echo "  [MODIFIED COMPONENT] $FILE"
-              echo "    -> Existing spec found at $TEST_FILE - will be UPDATED."
-            else
-              echo "  [NEW COMPONENT] $FILE"
-              echo "    -> No existing spec - will be CREATED for the first time."
-            fi
-          done <<< "$CHANGED"
-          echo "=================================================="
-
-      - name: Generate/update Vue unit tests with Copilot CLI
+      - name: Generate/update comprehensive RegisterView test with Copilot CLI
         if: steps.diff.outputs.any_changes == 'true'
-        id: generate
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          SPECS=""
-          while IFS= read -r FILE; do
-            [ -z "$FILE" ] && continue
-            COMPONENT_NAME=$(basename "$FILE" .vue)
-            TEST_FILE="$(dirname "$FILE")/__tests__/${COMPONENT_NAME}.spec.js"
+          echo ">>> Generating/updating comprehensive test for RegisterView.vue"
 
-            if [ -f "$TEST_FILE" ]; then
-              echo ">>> Regenerating UPDATED spec for changed component: $FILE"
-            else
-              echo ">>> Generating NEW spec for new component: $FILE"
-            fi
+          copilot -p "This is a Vue 3 + TypeScript project using Vitest and @vue/test-utils, with Pinia for state management (store at ${{ steps.locate.outputs.store }}) and axios (wrapper at ${{ steps.locate.outputs.axios }}) for API calls. Look carefully at ${{ steps.locate.outputs.file }} (RegisterView.vue), including all its form fields, validation rules, and submit logic. Generate or update a comprehensive unit test spec at src/views/__tests__/RegisterView.spec.ts using Vitest and @vue/test-utils mount(). Cover EVERY one of these scenarios, skipping only what genuinely does not apply based on the actual component code: (1) component renders with all expected registration form fields present, (2) submitting with all fields empty shows the correct required-field validation errors for each field, (3) invalid email format is rejected, valid email format passes, (4) password field enforces any minimum length/complexity rules present in the component, weak passwords are rejected, (5) confirm-password field must match password - mismatch shows a specific error, match passes, (6) whitespace-only input in text fields is treated as invalid, (7) submit action is disabled or blocked while the form is invalid, (8) valid submission calls the auth store's register method (or axios directly, whichever the component actually uses) with the exact expected payload shape, (9) on successful registration response, the component redirects/navigates or emits the expected event, (10) on failed registration response (duplicate email, server error), the correct error message is displayed, (11) a loading/disabled state is shown on the submit button while the request is in flight, (12) any password-visibility toggle works correctly if present, (13) a link to the login page works correctly if present. Mock the Pinia store and any axios/API calls with vi.fn() - do not make real network calls. Write the file directly to disk, do not just print code." \
+            --allow-all-tools --allow-all-paths
 
-            copilot -p "This is a Vue 3 project using Vitest and @vue/test-utils. Look at $FILE. Generate or update a comprehensive unit test spec at $(dirname "$FILE")/__tests__/${COMPONENT_NAME}.spec.js using Vitest (describe/it/expect) and @vue/test-utils mount(). Cover ALL of the following scenarios where applicable to this component: (1) component renders with all expected form fields and elements present, (2) required field validation - submitting with empty fields shows correct validation errors, (3) email field validation - rejects invalid email formats, accepts valid ones, (4) password field validation - enforces minimum length/complexity rules if present in the component, (5) for registration: confirm-password field matches the password field, mismatch shows an error, (6) whitespace-only input in text fields is treated as invalid/trimmed, (7) submit button is disabled or submission is blocked while the form is invalid, (8) successful form submission calls the correct API/store method with the exact expected payload shape, (9) on successful API response, the component emits the correct event or redirects/navigates as expected, (10) on failed API response (e.g. wrong credentials, duplicate email), the correct error message is displayed to the user, (11) a loading/disabled state is shown while the submission request is in flight, (12) toggling any password-visibility or remember-me style UI controls works correctly if present. Mock all API/store calls with vi.fn() - do not make real network calls. Write the file directly to disk, do not just print code." \
-              --allow-all-tools --allow-all-paths
+          echo ">>> Done: RegisterView.spec.ts"
 
-            echo ">>> Done: ${COMPONENT_NAME}.spec.js"
-            SPECS="${SPECS}${TEST_FILE},"
-          done <<< "${{ steps.diff.outputs.changed_files }}"
-
-          SPECS="${SPECS%,}"
-          echo "=================================================="
-          echo "SUMMARY - Specs generated/updated this run:"
-          echo "$SPECS" | tr ',' '\n'
-          echo "=================================================="
-          echo "changed_specs=$SPECS" >> $GITHUB_OUTPUT
-
-      - name: Commit generated/updated specs and update scan marker
+      - name: Commit generated test and update scan marker
         if: steps.diff.outputs.any_changes == 'true'
         run: |
           git config user.name "copilot-bot"
           git config user.email "copilot-bot@users.noreply.github.com"
 
           mkdir -p .github
-          git rev-parse HEAD > .github/copilot-last-scan.txt
+          git rev-parse HEAD > .github/copilot-last-scan-register.txt
 
-          git add '**/__tests__/*.spec.js' '**/__tests__/*.spec.ts' .github/copilot-last-scan.txt
+          git add src/views/__tests__/RegisterView.spec.ts .github/copilot-last-scan-register.txt
           if git diff --cached --quiet; then
-            echo "No spec changes to commit."
+            echo "No changes to commit."
           else
-            git commit -m "chore: Copilot-generated/updated Vue unit tests + update scan marker [skip ci]"
+            git commit -m "chore: Copilot-generated/updated RegisterView test + update scan marker [skip ci]"
             git pull --rebase origin ${{ github.ref_name }}
             git push origin HEAD:${{ github.ref_name }}
           fi
 
-  run-affected-tests:
+  run-affected-test:
     needs: copilot-generate-tests
     if: needs.copilot-generate-tests.outputs.any_changes == 'true'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest (including Copilot-generated specs)
+      - name: Checkout latest (including Copilot-generated test)
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
@@ -168,16 +151,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run only the affected specs
-        run: |
-          echo "Running specs: ${{ needs.copilot-generate-tests.outputs.changed_specs }}"
-          npx vitest run ${{ needs.copilot-generate-tests.outputs.changed_specs }} --reporter=default --reporter=html
+      - name: Run RegisterView test
+        run: npx vitest run src/views/__tests__/RegisterView.spec.ts --reporter=default --reporter=html
 
       - name: Upload HTML test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: vitest-html-report
+          name: register-test-html-report
           path: html-report/
 
   skip-notice:
@@ -186,4 +167,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: No changes detected
-        run: echo "No .vue component changes in this push - skipping test generation and execution."
+        run: echo "RegisterView.vue unchanged since last scan - skipping test generation and execution."
