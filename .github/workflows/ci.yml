@@ -4,7 +4,12 @@ on:
   push:
     branches-ignore:
       - main
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Force scan ALL .vue components regardless of what changed (use to test/debug)'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -37,19 +42,28 @@ jobs:
       - name: Detect changed Vue component files in this push
         id: diff
         run: |
-          BEFORE="${{ github.event.before }}"
-          if [ -z "$BEFORE" ] || [ "$BEFORE" == "0000000000000000000000000000000000000000" ]; then
-            BEFORE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
-          fi
-
-          if [ -z "$BEFORE" ]; then
+          if [ "${{ github.event.inputs.full_scan }}" == "true" ]; then
             echo "=================================================="
-            echo "No previous commit found - first run on this branch."
-            echo "Treating ALL existing .vue components as new for scanning."
+            echo "MANUAL FULL SCAN requested - scanning ALL .vue components."
             echo "=================================================="
             CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
           else
-            CHANGED=$(git diff --name-only "$BEFORE" HEAD -- '*.vue' | grep -E 'src/(components|views)' || true)
+            BEFORE="${{ github.event.before }}"
+            if [ -z "$BEFORE" ] || [ "$BEFORE" == "0000000000000000000000000000000000000000" ]; then
+              BEFORE=$(git rev-parse HEAD~1 2>/dev/null || echo "")
+            fi
+
+            echo "DEBUG: BEFORE=$BEFORE  HEAD=$(git rev-parse HEAD)"
+
+            if [ -z "$BEFORE" ]; then
+              echo "=================================================="
+              echo "No previous commit found - first run on this branch."
+              echo "Treating ALL existing .vue components as new for scanning."
+              echo "=================================================="
+              CHANGED=$(find src/components src/views -name "*.vue" 2>/dev/null)
+            else
+              CHANGED=$(git diff --name-only "$BEFORE" HEAD -- '*.vue' | grep -E 'src/(components|views)' || true)
+            fi
           fi
 
           if [ -z "$CHANGED" ]; then
